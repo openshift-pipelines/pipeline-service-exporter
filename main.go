@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/bnallapeta/pipeline-service-exporter/collector"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
@@ -54,26 +53,6 @@ func main() {
 	}
 
 	prometheus.MustRegister(psCollector)
-
-	// Define the scrape interval, default to 10 seconds
-	var scrapeInterval = 15 * time.Second
-
-	// Define a ticker to scrape the metrics periodically
-	ticker := time.NewTicker(scrapeInterval)
-	defer ticker.Stop()
-
-	ch := make(chan prometheus.Metric)
-	defer close(ch)
-
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				fmt.Printf("Ticker called at %v\n", time.Now())
-				psCollector.Collect(ch)
-			}
-		}
-	}()
 
 	// Define a channel to watch out for any termination signals
 	gracefulStop := make(chan os.Signal, 1)

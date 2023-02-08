@@ -64,9 +64,9 @@ func calculateScheduledDuration(pipelineRun v1beta1.PipelineRun) (float64, error
 	//	return 0, nil
 	//}
 
-	durationScheduled = scheduledTime.Sub(createdTime).Seconds()
 	// Mark this pipeline run as processed
 	//processedScheduledPipelineRuns[pipelineRun.UID] = true
+	durationScheduled = scheduledTime.Sub(createdTime).Seconds()
 
 	return durationScheduled, nil
 }
@@ -99,9 +99,9 @@ func calculateCompletedDuration(pipelineRun v1beta1.PipelineRun) (float64, error
 	//	return 0, nil
 	//}
 
-	durationCompleted = completionTime.Sub(scheduledTime).Seconds()
 	// Mark this pipeline run as processed
 	//processedCompletedPipelineRuns[pipelineRun.UID] = true
+	durationCompleted = completionTime.Sub(scheduledTime).Seconds()
 
 	return durationCompleted, nil
 }
