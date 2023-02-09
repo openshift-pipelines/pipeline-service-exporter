@@ -1,7 +1,6 @@
 package collector
 
 import (
-	"fmt"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
@@ -61,20 +60,17 @@ func (c *PipelineServiceCollector) collect(ch chan<- prometheus.Metric) error {
 		// Fetch and compute the metrics for schedule and completed time
 		scheduledDuration, err := calculateScheduledDuration(pipelineRun)
 		if err != nil {
-			fmt.Println("Error while calculating the scheduled time of a PipelineRun: ", err)
+			level.Error(c.logger).Log("msg", "Error while calculating the scheduled time of a PipelineRun: ", "err", err)
 		}
-		//fmt.Printf("scheduledDuration of the PipelineRun %v: %v\n", pipelineRun.Name, scheduledDuration)
 
 		completedDuration, err := calculateCompletedDuration(pipelineRun)
 		if err != nil {
-			fmt.Println("Error while calculating the completion time of a PipelineRun: ", err)
+			level.Error(c.logger).Log("msg", "Error while calculating the completion time of a PipelineRun: ", "err", err)
 		}
-		fmt.Printf("completedDuration of the PipelineRun %v: %v\n", pipelineRun.Name, completedDuration)
 
 		// Set the metrics
 		c.durationScheduled.WithLabelValues(pipelineRun.Name, string(pipelineRun.UID)).Set(scheduledDuration)
 		c.durationCompleted.WithLabelValues(pipelineRun.Name, string(pipelineRun.UID)).Set(completedDuration)
-
 	}
 
 	// Make sure it is passed to the channel so that it is exported out
