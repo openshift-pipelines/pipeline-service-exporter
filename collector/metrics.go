@@ -2,12 +2,16 @@ package collector
 
 import (
 	"context"
-	"fmt"
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 )
+
+// logger initialized from go-kit/log
+var logger log.Logger
 
 // getPipelineRuns returns the list of PipelineRuns
 func getPipelineRuns() (*v1beta1.PipelineRunList, error) {
@@ -17,15 +21,13 @@ func getPipelineRuns() (*v1beta1.PipelineRunList, error) {
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		fmt.Println(err)
+		level.Error(logger).Log("msg", "error reading InClusterConfig", "error", err)
 		return nil, err
 	}
 
-	//config, err := clientcmd.BuildConfigFromFlags("", "")
-
 	tektonClient, err := tektonclient.NewForConfig(config)
 	if err != nil {
-		fmt.Println(err)
+		level.Error(logger).Log("msg", "error creating a tektonClient", "error", err)
 		return nil, err
 	}
 
@@ -37,43 +39,33 @@ func getPipelineRuns() (*v1beta1.PipelineRunList, error) {
 }
 
 func calculateScheduledDuration(pipelineRun v1beta1.PipelineRun) (float64, error) {
-	fmt.Println("\n\n Inside calculateScheduledDuration")
 	var durationScheduled float64
 
 	// Fetch the creation and scheduled times
 	createdTime := pipelineRun.ObjectMeta.CreationTimestamp.Time
 	startTime := pipelineRun.Status.StartTime.Time
 
-	fmt.Println("createdTime: ", createdTime)
-	fmt.Println("startTime: ", startTime)
-
 	// Check if either one of these values is zero
 	if createdTime.IsZero() || startTime.IsZero() {
-		return 0, fmt.Errorf("could not calculate scheduled duration, as creation time or scheduled time is not set")
+		return 0, level.Error(logger).Log("msg", "could not calculate scheduled duration, as creation time or scheduled time is not set.")
 	}
 
 	durationScheduled = startTime.Sub(createdTime).Seconds()
-
 	return durationScheduled, nil
 }
 
 func calculateCompletedDuration(pipelineRun v1beta1.PipelineRun) (float64, error) {
-	fmt.Println("\n\n Inside calculateCompletedDuration")
 	var timeCompleted float64
 
 	// Fetch the scheduled and completion times
 	startTime := pipelineRun.Status.StartTime.Time
 	completionTime := pipelineRun.Status.CompletionTime.Time
 
-	fmt.Println("startTime: ", startTime)
-	fmt.Println("completionTime: ", completionTime)
-
 	// Check if either one of these values is zero
 	if completionTime.IsZero() {
-		return 0, fmt.Errorf("PipelineRun has not completed yet")
+		return 0, level.Error(logger).Log("msg", "pipelineRun is not completed yet.")
 	}
 
 	timeCompleted = completionTime.Sub(startTime).Seconds()
-
 	return timeCompleted, nil
 }
