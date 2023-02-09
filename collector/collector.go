@@ -8,21 +8,6 @@ import (
 	"sync"
 )
 
-var (
-	durationScheduled = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "pipelinerun_duration_scheduled_seconds",
-		Help: "Duration in seconds for a PipelineRun to be scheduled.",
-	},
-		[]string{"name", "timestamp"},
-	)
-	durationCompleted = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "pipelinerun_duration_completed_seconds",
-		Help: "Duration in seconds for a PipelineRun to complete.",
-	},
-		[]string{"name", "timestamp"},
-	)
-)
-
 // PipelineServiceCollector struct
 type PipelineServiceCollector struct {
 	logger            log.Logger
@@ -32,7 +17,17 @@ type PipelineServiceCollector struct {
 }
 
 func NewCollector(logger log.Logger) (*PipelineServiceCollector, error) {
+	durationScheduled := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "pipelinerun_duration_scheduled_seconds",
+		Help: "Duration in seconds for a PipelineRun to be scheduled.",
+	}, []string{"name", "uid"})
+	durationCompleted := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "pipelinerun_duration_completed_seconds",
+		Help: "Duration in seconds for a PipelineRun to complete.",
+	}, []string{"name", "uid"})
+
 	return &PipelineServiceCollector{
+		logger:            logger,
 		durationScheduled: durationScheduled,
 		durationCompleted: durationCompleted,
 	}, nil
@@ -68,7 +63,7 @@ func (c *PipelineServiceCollector) collect(ch chan<- prometheus.Metric) error {
 		if err != nil {
 			fmt.Println("Error while calculating the scheduled time of a PipelineRun: ", err)
 		}
-		fmt.Printf("scheduledDuration of the PipelineRun %v: %v\n", pipelineRun.Name, scheduledDuration)
+		//fmt.Printf("scheduledDuration of the PipelineRun %v: %v\n", pipelineRun.Name, scheduledDuration)
 
 		completedDuration, err := calculateCompletedDuration(pipelineRun)
 		if err != nil {
@@ -77,15 +72,14 @@ func (c *PipelineServiceCollector) collect(ch chan<- prometheus.Metric) error {
 		fmt.Printf("completedDuration of the PipelineRun %v: %v\n", pipelineRun.Name, completedDuration)
 
 		// Set the metrics
-		uidScheduled := fmt.Sprintf("%s_%d", pipelineRun.Name, pipelineRun.ObjectMeta.CreationTimestamp.Unix())
-		uidCompleted := fmt.Sprintf("%s_%d", pipelineRun.Name, pipelineRun.Status.CompletionTime.Unix())
-		durationScheduled.WithLabelValues(pipelineRun.Name, uidScheduled).Set(scheduledDuration)
-		durationCompleted.WithLabelValues(pipelineRun.Name, uidCompleted).Set(completedDuration)
+		c.durationScheduled.WithLabelValues(pipelineRun.Name, string(pipelineRun.UID)).Set(scheduledDuration)
+		c.durationCompleted.WithLabelValues(pipelineRun.Name, string(pipelineRun.UID)).Set(completedDuration)
 
-		// Make sure it is passed to the channel so that it is exported out
-		c.durationScheduled.Collect(ch)
-		c.durationCompleted.Collect(ch)
 	}
+
+	// Make sure it is passed to the channel so that it is exported out
+	c.durationScheduled.Collect(ch)
+	c.durationCompleted.Collect(ch)
 
 	return nil
 }
