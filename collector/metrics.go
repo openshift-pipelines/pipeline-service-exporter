@@ -47,7 +47,7 @@ func getPipelineRuns() (*v1beta1.PipelineRunList, error) {
 		return nil, err
 	}
 
-	prs, err = tektonClient.TektonV1beta1().PipelineRuns("default").List(context.Background(), metav1.ListOptions{})
+	prs, err = tektonClient.TektonV1beta1().PipelineRuns("").List(context.Background(), metav1.ListOptions{})
 	if len(prs.Items) == 0 {
 		return prs, err
 	}
