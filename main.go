@@ -17,6 +17,7 @@
 package main
 
 import (
+	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/openshift-pipelines/pipeline-service-exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,7 +27,8 @@ import (
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
 	"github.com/prometheus/exporter-toolkit/web/kingpinflag"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
+
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -40,23 +42,28 @@ var (
 	listenAddress = kingpin.Flag("telemetry.address", "Address at which pipeline-service metrics are exported.").Default(".9117").String()
 	metricsPath   = kingpin.Flag("telemetry-path", "Path at which pipeline-service metrics are exported.").Default("/metrics").String()
 	toolkitFlags  = kingpinflag.AddFlags(kingpin.CommandLine, ":9117")
+	logger        log.Logger
+	promlogConfig *promlog.Config
 )
 
 const (
 	exporterName = "pipeline_service_exporter"
 )
 
+func init() {
+	promlogConfig := &promlog.Config{}
+	logger = promlog.New(promlogConfig)
+}
+
 func main() {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	promlogConfig := &promlog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)
 	kingpin.Version(version.Print(exporterName))
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
-	logger := promlog.New(promlogConfig)
 
 	level.Info(logger).Log("msg", "Starting pipeline_service_exporter", "version", version.Info())
 	level.Info(logger).Log("msg", "Build context", "build", version.BuildContext())
@@ -86,6 +93,11 @@ func main() {
 		os.Exit(0)
 	}()
 
+	// Start the server
+	StartServer()
+}
+
+func StartServer() {
 	// Define paths
 	http.Handle(*metricsPath, promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
