@@ -51,7 +51,7 @@ const (
 )
 
 func init() {
-	promlogConfig := &promlog.Config{}
+	promlogConfig = &promlog.Config{}
 	logger = promlog.New(promlogConfig)
 }
 
