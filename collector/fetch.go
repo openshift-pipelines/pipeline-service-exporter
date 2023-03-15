@@ -6,19 +6,21 @@ import (
 	v1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"os"
 )
 
 func (c *PipelineServiceCollector) getPipelineRuns() ([]*v1beta1.PipelineRun, error) {
+	var kubeconfig = os.Getenv("KUBECONFIG")
 	var pipelineRuns []*v1beta1.PipelineRun
 	limit := int64(100)
 	listOptions := metav1.ListOptions{
 		Limit: limit,
 	}
 
-	config, err := rest.InClusterConfig()
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
-		level.Error(logger).Log("msg", "error reading InClusterConfig", "error", err)
+		level.Error(logger).Log("msg", "error building a config from kubeconfig", "error", err)
 		return nil, err
 	}
 
