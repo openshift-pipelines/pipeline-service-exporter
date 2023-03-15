@@ -8,10 +8,21 @@ With this exporter, we can track important metrics such as PipelineRun durations
 
 The exporter is designed to integrate into Stonesoup Monitoring dashboards, allowing easy monitoring and visualization of the metrics that are most important.
 
-### Deployment
-Pipeline Service Exporter is deployed as a separate service within the [Pipeline Service](https://github.com/openshift-pipelines/pipeline-service/tree/main/operator/gitops/argocd/pipeline-service/metrics-exporter) repository. The Deployment (built out of container image created from the Dockerfile in this repo), Service and other resources required for it live in that folder.
+### Development Mode
 
-This along with all the other components of Pipeline Service gets deployed to the Stonesoup cluster/
+Make sure to set the KUBECONFIG env variable to point to the kubeconfig of your kubernetes cluster.
+```
+export KUBECONFIG="/home/user/.kube/config"
+```
+_Note: When running the exporter in a pod, there won't be a need to set KUBECONFIG as the exporter would use InClusterConfig() to read the cluster information._
+
+Post this, one can run the below command to run the exporter locally:
+```
+go run main.go
+```
+
+### Deployment
+Pipeline Service Exporter is deployed as a separate service within the [Pipeline Service](https://github.com/openshift-pipelines/pipeline-service/tree/main/operator/gitops/argocd/pipeline-service/metrics-exporter) repository. The Deployment (built out of a container image created from the Dockerfile in this repo), Service and other resources required for it are present in that folder.
 
 ### License
 Pipeline Service Exporter is licensed under the Apache-2.0 license.
