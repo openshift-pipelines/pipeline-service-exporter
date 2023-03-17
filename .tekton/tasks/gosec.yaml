@@ -1,0 +1,17 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: gosec
+spec:
+  workspaces:
+    - name: source
+  steps:
+    - name: run-gosec
+      workingDir: "$(workspaces.source.path)"
+      image: quay.io/redhat-pipeline-service/gosec:exporter-ci
+      imagePullPolicy: Always
+      command: ["/bin/sh"]
+      args:
+        - "-c"
+        - "/run.sh"
