@@ -1,5 +1,35 @@
-# Build the exporter binary using golang alpine as the base image
-FROM golang:1.19.5-alpine as builder
+# Use ubi9 base image as builder
+FROM registry.access.redhat.com/ubi9/ubi-minimal@sha256:61925d31338b7b41bfd5b6b8cf45eaf80753d415b0269fc03613c5c5049b879e as builder
+
+# Install Golang
+RUN microdnf install -y wget tar gzip && \
+    wget -P /tmp https://golang.org/dl/go1.19.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf /tmp/go1.19.linux-amd64.tar.gz && \
+    ln -s /usr/local/go/bin/go /usr/bin/go && \
+    microdnf clean all
+
+# Set the working directory
+RUN mkdir /workspace && chmod 777 /workspace && chown 65532:65532 /workspace
+WORKDIR /workspace
+
+# Copy the Go modules
+COPY go.mod go.mod
+COPY go.sum go.sum
+
+# cache dependencies before building and copying source so that we don't need to re-download as much
+# and so that source changes don't invalidate our downloaded layer
+RUN echo $PATH
+RUN go mod download
+
+# Copy the Go files into the image
+COPY main.go main.go
+COPY collector/ collector/
+
+# Build the Go program
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o exporter main.go
+
+# Use ubi9 base image as the second stage
+FROM registry.access.redhat.com/ubi9/ubi-minimal@sha256:61925d31338b7b41bfd5b6b8cf45eaf80753d415b0269fc03613c5c5049b879e
 
 # Set the appropriate labels
 LABEL build-date= \
@@ -17,27 +47,6 @@ LABEL build-date= \
     vendor="Pipeline Service" \
     version="0.1"
 
-# Set the working directory
-RUN mkdir /workspace && chmod 777 /workspace && chown 65532:65532 /workspace
-WORKDIR /workspace
-
-# Copy the Go modules
-COPY go.mod go.mod
-COPY go.sum go.sum
-
-# cache dependencies before building and copying source so that we don't need to re-download as much
-# and so that source changes don't invalidate our downloaded layer
-RUN go mod download
-
-# Copy the Go files into the image
-COPY main.go main.go
-COPY collector/ collector/
-
-# Build the Go program
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o exporter main.go
-
-# Use distroless images to package the exporter binary
-FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/exporter .
 USER 65532:65532
