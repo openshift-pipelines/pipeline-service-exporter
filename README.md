@@ -25,4 +25,4 @@ go run main.go
 Pipeline Service Exporter is deployed as a separate service within the [Pipeline Service](https://github.com/openshift-pipelines/pipeline-service/tree/main/operator/gitops/argocd/pipeline-service/metrics-exporter) repository. The Deployment (built out of a container image created from the Dockerfile in this repo), Service and other resources required for it are present in that folder.
 
 ### License
-Pipeline Service Exporter is licensed under the Apache-2.0 license.
+The Pipeline Service Exporter is licensed under the Apache-2.0 license.
