@@ -13,12 +13,12 @@ metadata:
     appstudio.openshift.io/application: pipeline-service-metrics-exporter
     appstudio.openshift.io/component: devfile-sample-go-basic-zp3p
     pipelines.appstudio.openshift.io/type: build
-  name: devfile-sample-go-basic-zp3p-on-pull-request
+  name: pipeline-service-metrics-exporter-pull-request
   namespace: bnr-tenant
 spec:
   params:
   - name: dockerfile
-    value: docker/Dockerfile
+    value: Dockerfile
   - name: git-url
     value: '{{repo_url}}'
   - name: output-image
