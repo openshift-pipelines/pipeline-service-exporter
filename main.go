@@ -17,6 +17,13 @@
 package main
 
 import (
+	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/openshift-pipelines/pipeline-service-exporter/collector"
@@ -28,19 +35,14 @@ import (
 	"github.com/prometheus/exporter-toolkit/web"
 	"github.com/prometheus/exporter-toolkit/web/kingpinflag"
 	"gopkg.in/alecthomas/kingpin.v2"
-
-	"net/http"
-	_ "net/http/pprof"
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
-	"time"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
 var (
 	listenAddress = kingpin.Flag("telemetry.address", "Address at which pipeline-service metrics are exported.").Default(".9117").String()
 	metricsPath   = kingpin.Flag("telemetry-path", "Path at which pipeline-service metrics are exported.").Default("/metrics").String()
+	probeAddr     = kingpin.Flag("health-probe-bind-address", "The address the probe endpoint binds to.").Default(":8081").String()
 	toolkitFlags  = kingpinflag.AddFlags(kingpin.CommandLine, ":9117")
 	logger        log.Logger
 	promlogConfig *promlog.Config
@@ -57,9 +59,6 @@ func init() {
 
 func main() {
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)
 	kingpin.Version(version.Print(exporterName))
 	kingpin.HelpFlag.Short('h')
@@ -69,9 +68,48 @@ func main() {
 	level.Info(logger).Log("msg", "Build context", "build", version.BuildContext())
 	level.Info(logger).Log("msg", "Starting Server: ", "listen_address", *listenAddress)
 
+	ctx := ctrl.SetupSignalHandler()
+	restConfig := ctrl.GetConfigOrDie()
+	var mgr ctrl.Manager
+	var err error
+	mopts := ctrl.Options{
+		//TODO when we switch to controller-runtime prometheus integration, we will set MetricsBindAddress of the Options struct to listenAddress
+		Port:                   9443,
+		HealthProbeBindAddress: *probeAddr,
+	}
+
+	mgr, err = collector.NewManager(restConfig, mopts, logger)
+	if err != nil {
+		level.Error(logger).Log("msg", "unable to start manager", "error", err)
+		os.Exit(1)
+	}
+
+	//+kubebuilder:scaffold:builder
+
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		level.Error(logger).Log("msg", "unable to set up health check", "error", err)
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		level.Error(logger).Log("msg", "unable ot set up ready check", "error", err)
+		os.Exit(1)
+	}
+
+	level.Info(logger).Log("msg", "starting manager")
+
+	//TODO when we switch over to container-runtime's prometheus integration, we can move
+	// out of the go func and use mgr.Start as the blocking call, in lieu of the StartServer below
+	go func() {
+		if err := mgr.Start(ctx); err != nil {
+			level.Error(logger).Log("msg", "problem running manager", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	//TODO when we switch to controller-runtime prometheus integration, we will call Registry.MustRegister(version.NewCollector(exporterName)) from "sigs.k8s.io/controller-runtime/pkg/metrics" and do so within SetupPipelineRunCachingClient
 	prometheus.MustRegister(version.NewCollector(exporterName))
 
-	psCollector, err := collector.NewCollector(logger)
+	psCollector, err := collector.NewCollector(logger, mgr.GetClient())
 	if err != nil {
 		level.Error(logger).Log("msg", "Couldn't create collector", "error", err)
 		os.Exit(1)
@@ -93,6 +131,7 @@ func main() {
 		os.Exit(0)
 	}()
 
+	level.Info(logger).Log("msg", "calling StartServer")
 	// Start the server
 	StartServer()
 }

@@ -2,51 +2,22 @@ package collector
 
 import (
 	"context"
-	"github.com/go-kit/log/level"
-	v1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	tektonclient "github.com/tektoncd/pipeline/pkg/client/clientset/versioned"
+
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/clientcmd"
-	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (c *PipelineServiceCollector) getPipelineRuns() ([]*v1beta1.PipelineRun, error) {
-	var kubeconfig = os.Getenv("KUBECONFIG")
-	var pipelineRuns []*v1beta1.PipelineRun
-	limit := int64(100)
-	listOptions := metav1.ListOptions{
-		Limit: limit,
-	}
-
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		level.Error(logger).Log("msg", "error building a config from kubeconfig", "error", err)
-		return nil, err
-	}
-
-	tektonClient, err := tektonclient.NewForConfig(config)
-	if err != nil {
-		level.Error(logger).Log("msg", "error creating a tektonClient", "error", err)
-		return nil, err
-	}
-
-	for {
-		prs, err := tektonClient.TektonV1beta1().PipelineRuns("").List(context.Background(), listOptions)
-		if err != nil {
-			return nil, err
-		}
-
-		pipelineRunItems := prs.Items
-
-		for i := range pipelineRunItems {
-			pipelineRuns = append(pipelineRuns, &pipelineRunItems[i])
-		}
-
-		if prs.Continue == "" {
-			break
-		}
-		listOptions.Continue = prs.Continue
-	}
-
-	return pipelineRuns, nil
+func (c *PipelineServiceCollector) getPipelineRuns() ([]v1beta1.PipelineRun, error) {
+	//NOTE:  there is no need to filter queries based on counts, worried about pagination, like with the old non-caching, polling client implementation;
+	// if over time we think we need to filter at all, it should be based on labels ...appstudio based labels for example:
+	//"appstudio.openshift.io/pac-provision"
+	//"appstudio.openshift.io/application"
+	//"appstudio.openshift.io/component"
+	// like is seen with the build-service; we can also keep an eye on how the core tekton pipelines controller is tuned
+	prList := v1beta1.PipelineRunList{}
+	opts := &client.ListOptions{Namespace: metav1.NamespaceAll}
+	err := c.client.List(context.Background(), &prList, opts)
+	return prList.Items, err
 }
