@@ -17,30 +17,22 @@
 package main
 
 import (
-	"net/http"
-	_ "net/http/pprof"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
-
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/openshift-pipelines/pipeline-service-exporter/collector"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/common/version"
-	"github.com/prometheus/exporter-toolkit/web"
 	"github.com/prometheus/exporter-toolkit/web/kingpinflag"
 	"gopkg.in/alecthomas/kingpin.v2"
+	_ "net/http/pprof"
+	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
 var (
-	listenAddress = kingpin.Flag("telemetry.address", "Address at which pipeline-service metrics are exported.").Default(".9117").String()
+	listenAddress = kingpin.Flag("telemetry.address", "Address at which pipeline-service metrics are exported.").Default(":9117").String()
 	metricsPath   = kingpin.Flag("telemetry-path", "Path at which pipeline-service metrics are exported.").Default("/metrics").String()
 	probeAddr     = kingpin.Flag("health-probe-bind-address", "The address the probe endpoint binds to.").Default(":8081").String()
 	toolkitFlags  = kingpinflag.AddFlags(kingpin.CommandLine, ":9117")
@@ -73,7 +65,7 @@ func main() {
 	var mgr ctrl.Manager
 	var err error
 	mopts := ctrl.Options{
-		//TODO when we switch to controller-runtime prometheus integration, we will set MetricsBindAddress of the Options struct to listenAddress
+		MetricsBindAddress:     *listenAddress,
 		Port:                   9443,
 		HealthProbeBindAddress: *probeAddr,
 	}
@@ -97,62 +89,9 @@ func main() {
 
 	level.Info(logger).Log("msg", "starting manager")
 
-	//TODO when we switch over to container-runtime's prometheus integration, we can move
-	// out of the go func and use mgr.Start as the blocking call, in lieu of the StartServer below
-	go func() {
-		if err := mgr.Start(ctx); err != nil {
-			level.Error(logger).Log("msg", "problem running manager", "error", err)
-			os.Exit(1)
-		}
-	}()
-
-	//TODO when we switch to controller-runtime prometheus integration, we will call Registry.MustRegister(version.NewCollector(exporterName)) from "sigs.k8s.io/controller-runtime/pkg/metrics" and do so within SetupPipelineRunCachingClient
-	prometheus.MustRegister(version.NewCollector(exporterName))
-
-	psCollector, err := collector.NewCollector(logger, mgr.GetClient())
-	if err != nil {
-		level.Error(logger).Log("msg", "Couldn't create collector", "error", err)
+	if err := mgr.Start(ctx); err != nil {
+		level.Error(logger).Log("msg", "problem running manager", "error", err)
 		os.Exit(1)
 	}
 
-	prometheus.MustRegister(psCollector)
-
-	// Define a channel to watch out for any termination signals
-	gracefulStop := make(chan os.Signal, 1)
-	signal.Notify(gracefulStop, syscall.SIGINT, syscall.SIGTERM)
-
-	// Listen for the termination signals from the OS
-	go func() {
-		level.Info(logger).Log("msg", "Listening and waiting for graceful stop")
-		sig := <-gracefulStop
-		level.Info(logger).Log("msg", "Caught signal: %+v. Waiting 2 seconds...", "signal", sig)
-		time.Sleep(2 * time.Second)
-		level.Info(logger).Log("msg", "Terminating pipeline_service_exporter on port: ", "listen_address", *listenAddress)
-		os.Exit(0)
-	}()
-
-	level.Info(logger).Log("msg", "calling StartServer")
-	// Start the server
-	StartServer()
-}
-
-func StartServer() {
-	// Define paths
-	http.Handle(*metricsPath, promhttp.Handler())
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`<html>
-			<head><title>Pipeline Exporter</title></head>
-			<body>
-			<h1>Pipeline Exporter</h1>
-			<p><a href='` + *metricsPath + `'>Metrics</a></p>
-			</body>
-			</html>`))
-	})
-
-	// Start the server
-	srv := &http.Server{Addr: *listenAddress}
-	if err := web.ListenAndServe(srv, toolkitFlags, logger); err != nil {
-		level.Error(logger).Log("error", "Port Listen Address error", "reason", err)
-		os.Exit(1)
-	}
 }
