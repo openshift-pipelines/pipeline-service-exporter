@@ -97,11 +97,11 @@ func TestNewCollector(t *testing.T) {
 		}
 	}()
 	collector.collect(ch)
-	label := prometheus.Labels{"name": "test-pipelinerun-1", "uid": "test-pipelinerun-1"}
+	label := prometheus.Labels{"namespace": "test-namespace"}
 	g, e := collector.durationScheduled.GetMetricWith(label)
 	assert.NoError(t, e)
 	assert.NotNil(t, g)
-	label = prometheus.Labels{"name": "test-pipelinerun-2", "uid": "test-pipelinerun-2"}
+	label = prometheus.Labels{"namespace": "test-namespace"}
 	g, e = collector.durationCompleted.GetMetricWith(label)
 	assert.NoError(t, e)
 	assert.NotNil(t, g)
