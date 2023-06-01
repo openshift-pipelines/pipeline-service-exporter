@@ -37,16 +37,13 @@ func NewCollector(logger log.Logger, client client.Client) (*PipelineServiceColl
 	durationScheduled := prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "pipelinerun_duration_scheduled_seconds",
 		Help: "Duration in seconds for a PipelineRun to be scheduled.",
-		//TODO the uid will get us a unique entry, but wouldn't adding namespace will help usability when consuming this metric?
-		// also, labels at an individual PipelineRun is a scalability issue with prometheus
-	}, []string{"name", "uid"})
+	}, []string{"namespace"})
 
 	//TODO should this be converted to a Desc so we can use constant metrics
 	durationCompleted := prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "pipelinerun_duration_completed_seconds",
 		Help: "Duration in seconds for a PipelineRun to complete.",
-		//TODO the uid will get us a unique entry, but wouldn't adding namespace help usability with humans consuming this metric?
-	}, []string{"name", "uid"})
+	}, []string{"namespace"})
 
 	pipelineServiceCollector := &PipelineServiceCollector{
 		logger:            logger,
@@ -96,13 +93,13 @@ func (c *PipelineServiceCollector) collect(ch chan<- prometheus.Metric) error {
 		}
 
 		// Set the metrics
-		//TODO should we switch to constant metrics a la "ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, float64(v), name, uid)"
-		c.durationScheduled.WithLabelValues(pipelineRun.Name, string(pipelineRun.UID)).Set(scheduledDuration)
-		c.durationCompleted.WithLabelValues(pipelineRun.Name, string(pipelineRun.UID)).Set(completedDuration)
+		//TODO should we switch to constant metrics a la "ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, float64(v), name, uid)" ?
+		c.durationScheduled.WithLabelValues(pipelineRun.Namespace).Set(scheduledDuration)
+		c.durationCompleted.WithLabelValues(pipelineRun.Namespace).Set(completedDuration)
 	}
 
 	// Make sure it is passed to the channel so that it is exported out
-	//TODO by switching to a const metric and employing "ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, float64(v), name, uid)" we would no longer need this
+	//TODO if we switched to a const metric, then the "ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, float64(v), name, uid)" above would replace this
 	c.durationScheduled.Collect(ch)
 	c.durationCompleted.Collect(ch)
 
