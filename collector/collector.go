@@ -26,23 +26,28 @@ import (
 // PipelineServiceCollector struct
 type PipelineServiceCollector struct {
 	logger            log.Logger
-	durationScheduled *prometheus.GaugeVec
-	durationCompleted *prometheus.GaugeVec
+	durationScheduled *prometheus.HistogramVec
+	durationCompleted *prometheus.HistogramVec
 
 	client client.Client
 }
 
 func NewCollector(logger log.Logger, client client.Client) (*PipelineServiceCollector, error) {
 	//TODO should this be converted to a Desc so we can use constant metrics
-	durationScheduled := prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "pipelinerun_duration_scheduled_seconds",
-		Help: "Duration in seconds for a PipelineRun to be scheduled.",
+	// shipwright establishment metrics buckets is []float64{0, 1, 2, 3, 5, 7, 10, 15, 20, 30}
+	// shipwright ramp up metrics buckets is prometheus.LinearBuckets(0, 1, 10)
+	durationScheduled := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "pipelinerun_duration_scheduled_seconds",
+		Help:    "Duration in seconds for a PipelineRun to be scheduled.",
+		Buckets: prometheus.LinearBuckets(0, 1, 10),
 	}, []string{"namespace"})
 
 	//TODO should this be converted to a Desc so we can use constant metrics
-	durationCompleted := prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "pipelinerun_duration_completed_seconds",
-		Help: "Duration in seconds for a PipelineRun to complete.",
+	// shipwright completion duration buckets is prometheus.LinearBuckets(50, 50, 10)
+	durationCompleted := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "pipelinerun_duration_completed_seconds",
+		Help:    "Duration in seconds for a PipelineRun to complete.",
+		Buckets: prometheus.LinearBuckets(50, 50, 10),
 	}, []string{"namespace"})
 
 	pipelineServiceCollector := &PipelineServiceCollector{
@@ -94,8 +99,8 @@ func (c *PipelineServiceCollector) collect(ch chan<- prometheus.Metric) error {
 
 		// Set the metrics
 		//TODO should we switch to constant metrics a la "ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, float64(v), name, uid)" ?
-		c.durationScheduled.WithLabelValues(pipelineRun.Namespace).Set(scheduledDuration)
-		c.durationCompleted.WithLabelValues(pipelineRun.Namespace).Set(completedDuration)
+		c.durationScheduled.WithLabelValues(pipelineRun.Namespace).Observe(scheduledDuration)
+		c.durationCompleted.WithLabelValues(pipelineRun.Namespace).Observe(completedDuration)
 	}
 
 	// Make sure it is passed to the channel so that it is exported out
