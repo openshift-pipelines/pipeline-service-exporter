@@ -2,7 +2,6 @@ package collector
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -14,12 +13,14 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
-func NewManager(cfg *rest.Config, options ctrl.Options, logger log.Logger) (ctrl.Manager, error) {
+var (
+	controllerLog = ctrl.Log.WithName("controller")
+)
+
+func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
 	// we have seen in testing that this path can get invoked prior to the PipelineRun CRD getting generated,
 	// and controller-runtime does not retry on missing CRDs.
 	// so we are going to wait on the CRDs existing before moving forward.
@@ -27,13 +28,13 @@ func NewManager(cfg *rest.Config, options ctrl.Options, logger log.Logger) (ctrl
 	if err := wait.PollImmediate(time.Second*5, time.Minute*5, func() (done bool, err error) {
 		_, err = apiextensionsClient.ApiextensionsV1().CustomResourceDefinitions().Get(context.TODO(), "pipelineruns.tekton.dev", metav1.GetOptions{})
 		if err != nil {
-			level.Info(logger).Log("msg", fmt.Sprintf("get of pipelinerun CRD failed with: %s", err.Error()))
+			controllerLog.Error(err, "get of pipelinerun CRD failed")
 			return false, nil
 		}
-		level.Info(logger).Log("msg", "get of pipelinerun CRD returned successfully")
+		controllerLog.Info("get of pipelinerun CRD returned successfully")
 		return true, nil
 	}); err != nil {
-		level.Error(logger).Log("msg", "timed out waiting for pipelinerun CRD to be created", err)
+		controllerLog.Error(err, "waiting for pipelinerun CRD to be created")
 		return nil, err
 	}
 
