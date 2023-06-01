@@ -17,10 +17,16 @@
 package collector
 
 import (
+	"fmt"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+var (
+	collectorLog = ctrl.Log.WithName("collector")
 )
 
 // PipelineServiceCollector struct
@@ -100,6 +106,8 @@ func (c *PipelineServiceCollector) collect(ch chan<- prometheus.Metric) error {
 
 		// Set the metrics
 		//TODO should we switch to constant metrics a la "ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, float64(v), name, uid)" ?
+		msg := fmt.Sprintf("pipelinerun %s:%s schedule duration %v complete duration %v", pipelineRun.Namespace, pipelineRun.Name, scheduledDuration, completedDuration)
+		collectorLog.V(4).Info(msg)
 		c.durationScheduled.WithLabelValues(pipelineRun.Namespace).Observe(scheduledDuration)
 		c.durationCompleted.WithLabelValues(pipelineRun.Namespace).Observe(completedDuration)
 	}

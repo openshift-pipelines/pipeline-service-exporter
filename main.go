@@ -17,26 +17,24 @@
 package main
 
 import (
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
-	"github.com/openshift-pipelines/pipeline-service-exporter/collector"
-	"github.com/prometheus/common/promlog"
-	"github.com/prometheus/common/promlog/flag"
-	"github.com/prometheus/common/version"
-	"github.com/prometheus/exporter-toolkit/web/kingpinflag"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"flag"
+
+	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	_ "net/http/pprof"
 	"os"
+
+	"github.com/go-logr/logr"
+	"github.com/openshift-pipelines/pipeline-service-exporter/collector"
+	"github.com/prometheus/common/promlog"
+	"github.com/prometheus/common/version"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
 var (
-	listenAddress = kingpin.Flag("telemetry.address", "Address at which pipeline-service metrics are exported.").Default(":9117").String()
-	metricsPath   = kingpin.Flag("telemetry-path", "Path at which pipeline-service metrics are exported.").Default("/metrics").String()
-	probeAddr     = kingpin.Flag("health-probe-bind-address", "The address the probe endpoint binds to.").Default(":8081").String()
-	toolkitFlags  = kingpinflag.AddFlags(kingpin.CommandLine, ":9117")
-	logger        log.Logger
+	mainLog       logr.Logger
 	promlogConfig *promlog.Config
 )
 
@@ -46,51 +44,63 @@ const (
 
 func init() {
 	promlogConfig = &promlog.Config{}
-	logger = promlog.New(promlogConfig)
 }
 
 func main() {
+	var listenAddress string
+	var metricsPath string
+	var probeAddr string
 
-	flag.AddFlags(kingpin.CommandLine, promlogConfig)
-	kingpin.Version(version.Print(exporterName))
-	kingpin.HelpFlag.Short('h')
-	kingpin.Parse()
+	flag.StringVar(&listenAddress, "telemetry.address", ":9117", "Address at which pipeline-service metrics are exported.")
+	flag.StringVar(&metricsPath, "telemetry-path", "/metrics", "Path at which pipeline-service metrics are exported.")
+	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 
-	level.Info(logger).Log("msg", "Starting pipeline_service_exporter", "version", version.Info())
-	level.Info(logger).Log("msg", "Build context", "build", version.BuildContext())
-	level.Info(logger).Log("msg", "Starting Server: ", "listen_address", *listenAddress)
+	opts := zap.Options{
+		Development: true,
+	}
+	opts.BindFlags(flag.CommandLine)
+	klog.InitFlags(flag.CommandLine)
+	flag.Parse()
+
+	logger := zap.New(zap.UseFlagOptions(&opts))
+	ctrl.SetLogger(logger)
+	mainLog = ctrl.Log.WithName("main")
+
+	mainLog.Info("Starting pipeline_service_exporter", "version", version.Info())
+	mainLog.Info("Build context", "build", version.BuildContext())
+	mainLog.Info("Starting Server: ", "listen_address", listenAddress)
 
 	ctx := ctrl.SetupSignalHandler()
 	restConfig := ctrl.GetConfigOrDie()
 	var mgr ctrl.Manager
 	var err error
 	mopts := ctrl.Options{
-		MetricsBindAddress:     *listenAddress,
+		MetricsBindAddress:     listenAddress,
 		Port:                   9443,
-		HealthProbeBindAddress: *probeAddr,
+		HealthProbeBindAddress: probeAddr,
 	}
 
-	mgr, err = collector.NewManager(restConfig, mopts, logger)
+	mgr, err = collector.NewManager(restConfig, mopts)
 	if err != nil {
-		level.Error(logger).Log("msg", "unable to start manager", "error", err)
+		mainLog.Error(err, "unable to start controller-runtime manager")
 		os.Exit(1)
 	}
 
 	//+kubebuilder:scaffold:builder
 
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		level.Error(logger).Log("msg", "unable to set up health check", "error", err)
+	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		mainLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		level.Error(logger).Log("msg", "unable ot set up ready check", "error", err)
+	if err = mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		mainLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
 
-	level.Info(logger).Log("msg", "starting manager")
+	mainLog.Info("Starting controller-runtime manager")
 
-	if err := mgr.Start(ctx); err != nil {
-		level.Error(logger).Log("msg", "problem running manager", "error", err)
+	if err = mgr.Start(ctx); err != nil {
+		mainLog.Error(err, "problem running controller-runtime manager")
 		os.Exit(1)
 	}
 
