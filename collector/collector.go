@@ -44,6 +44,7 @@ func NewCollector(logger log.Logger, client client.Client) (*PipelineServiceColl
 
 	//TODO should this be converted to a Desc so we can use constant metrics
 	// shipwright completion duration buckets is prometheus.LinearBuckets(50, 50, 10)
+	//TODO how does this compare to the upstream tekton metric tekton_pipelines_controller_pipelinerun_duration_seconds_[bucket, sum, count] that is of type Histogram/LastValue(Gauge) and has pipelinerun name level cardinality
 	durationCompleted := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "pipelinerun_duration_completed_seconds",
 		Help:    "Duration in seconds for a PipelineRun to complete.",
