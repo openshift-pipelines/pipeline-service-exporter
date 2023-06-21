@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -17,10 +16,10 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func TestNewCollector(t *testing.T) {
-	logger := log.NewNopLogger()
+func TestMetricCollection(t *testing.T) {
 	objs := []client.Object{}
 	scheme := runtime.NewScheme()
 	_ = v1beta1.AddToScheme(scheme)
@@ -72,39 +71,22 @@ func TestNewCollector(t *testing.T) {
 			},
 		},
 	}
+	reconciler := &ReconcilePipelineRun{client: c, psCollector: NewCollector()}
+	ctx := context.TODO()
 	for _, pr := range mockPipelineRuns {
 		err := c.Create(context.TODO(), pr)
 		assert.NoError(t, err)
+		request := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: pr.Namespace,
+				Name:      pr.Name,
+			},
+		}
+		_, err = reconciler.Reconcile(ctx, request)
 	}
 
-	collector, err := NewCollector(logger, c)
-	assert.NoError(t, err)
-	assert.NotNil(t, collector)
-	assert.NotNil(t, collector.durationScheduled)
-	assert.NotNil(t, collector.durationCompleted)
-	metricReceived := false
-	ch := make(chan prometheus.Metric)
-	go func() {
-		for {
-			select {
-			case m := <-ch:
-				if m != nil {
-					t.Logf("metric received: %#v\n", m)
-					metricReceived = true
-				}
-			}
-
-		}
-	}()
-	collector.collect(ch)
 	label := prometheus.Labels{"namespace": "test-namespace"}
-	g, e := collector.durationScheduled.GetMetricWith(label)
+	g, e := reconciler.psCollector.durationScheduled.GetMetricWith(label)
 	assert.NoError(t, e)
 	assert.NotNil(t, g)
-	label = prometheus.Labels{"namespace": "test-namespace"}
-	g, e = collector.durationCompleted.GetMetricWith(label)
-	assert.NoError(t, e)
-	assert.NotNil(t, g)
-	assert.True(t, metricReceived)
-	close(ch)
 }

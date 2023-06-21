@@ -17,14 +17,10 @@
 package collector
 
 import (
-	"github.com/go-kit/log"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
-// logger initialized from go-kit/log
-var logger log.Logger
-
-func calculateScheduledDuration(pipelineRun v1beta1.PipelineRun) float64 {
+func calculateScheduledDuration(pipelineRun *v1beta1.PipelineRun) float64 {
 	var durationScheduled float64
 
 	// Fetch the creation and scheduled times
@@ -38,20 +34,4 @@ func calculateScheduledDuration(pipelineRun v1beta1.PipelineRun) float64 {
 
 	durationScheduled = startTime.Sub(createdTime).Seconds()
 	return durationScheduled
-}
-
-func calculateCompletedDuration(pipelineRun v1beta1.PipelineRun) float64 {
-	var timeCompleted float64
-
-	// Fetch the scheduled and completion times
-	startTime := pipelineRun.Status.StartTime.Time
-	completionTime := pipelineRun.Status.CompletionTime.Time
-
-	// Check if completionTime is zero
-	if completionTime.IsZero() {
-		return 0
-	}
-
-	timeCompleted = completionTime.Sub(startTime).Seconds()
-	return timeCompleted
 }

@@ -74,68 +74,10 @@ func TestCalculateScheduledDuration(t *testing.T) {
 
 	for _, pr := range mockPipelineRuns {
 		want := 5
-		got := int(calculateScheduledDuration(*pr))
+		got := int(calculateScheduledDuration(pr))
 
 		if got != want {
 			t.Errorf("Scheduled Duration is not as expected. Got %d, expected %d", got, want)
-		}
-	}
-
-}
-
-func TestCalculateCompletedDuration(t *testing.T) {
-	// Create mock PipelineRuns data
-	mockPipelineRuns := []*v1beta1.PipelineRun{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              "test-pipelinerun-1",
-				Namespace:         "test-namespace",
-				CreationTimestamp: metav1.NewTime(time.Now().UTC()),
-			},
-			Status: v1beta1.PipelineRunStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 0,
-					Conditions: duckv1.Conditions{{
-						Type:   "Succeeded",
-						Status: corev1.ConditionTrue,
-					}},
-					Annotations: nil,
-				},
-				PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
-					StartTime:      &metav1.Time{Time: time.Now().UTC().Add(5 * time.Second)},
-					CompletionTime: &metav1.Time{Time: time.Now().UTC().Add(10 * time.Second)},
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              "test-pipelinerun-1",
-				Namespace:         "test-namespace",
-				CreationTimestamp: metav1.NewTime(time.Now().UTC()),
-			},
-			Status: v1beta1.PipelineRunStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 0,
-					Conditions: duckv1.Conditions{{
-						Type:   "Failed",
-						Status: corev1.ConditionTrue,
-					}},
-					Annotations: nil,
-				},
-				PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
-					StartTime:      &metav1.Time{Time: time.Now().UTC().Add(5 * time.Second)},
-					CompletionTime: &metav1.Time{Time: time.Now().UTC().Add(10 * time.Second)},
-				},
-			},
-		},
-	}
-
-	for _, pr := range mockPipelineRuns {
-		want := 5
-		got := int(calculateCompletedDuration(*pr))
-
-		if got != want {
-			t.Errorf("Completed Duration is not as expected. Got %d, expected %d", got, want)
 		}
 	}
 
