@@ -58,7 +58,7 @@ func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
 		return nil, err
 	}
 
-	err = SetupPipelineRunCachingClient(mgr)
+	err = SetupPipelineRunScheduleDurationController(mgr)
 	if err != nil {
 		return nil, err
 	}

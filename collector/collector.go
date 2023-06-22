@@ -31,8 +31,8 @@ func NewCollector() *PipelineServiceCollector {
 		Name: "pipelinerun_duration_scheduled_seconds",
 		Help: "Duration in seconds for a PipelineRun to be scheduled.",
 		// reminder: exponential buckets need a start value greater than 0
-		// should take us to a max of 312.5 seconds (.1 * 5 * 5 * 5 * 5 * 5)
-		Buckets: prometheus.ExponentialBuckets(0.1, 5, 5),
+		// the results in buckets of 0.1, 0.5, 2.5, 12.5, 62.5, 312.5 seconds
+		Buckets: prometheus.ExponentialBuckets(0.1, 5, 6),
 	}, []string{"namespace"})
 
 	pipelineServiceCollector := &PipelineServiceCollector{
