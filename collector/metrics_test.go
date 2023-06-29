@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-func TestCalculateScheduledDuration(t *testing.T) {
+func TestCalculatePipelineRunScheduledDuration(t *testing.T) {
 	// Create mock PipelineRuns data
 	mockPipelineRuns := []*v1beta1.PipelineRun{
 		{
@@ -74,7 +74,65 @@ func TestCalculateScheduledDuration(t *testing.T) {
 
 	for _, pr := range mockPipelineRuns {
 		want := 5
-		got := int(calculateScheduledDuration(pr))
+		got := int(calculateScheduledDurationPipelineRun(pr))
+
+		if got != want {
+			t.Errorf("Scheduled Duration is not as expected. Got %d, expected %d", got, want)
+		}
+	}
+
+}
+
+func TestCalculateTaskRunScheduledDuration(t *testing.T) {
+	// Create mock TaskRuns data
+	mockTaskRuns := []*v1beta1.TaskRun{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "test-taskrun-1",
+				Namespace:         "test-namespace",
+				CreationTimestamp: metav1.NewTime(time.Now().UTC()),
+			},
+			Status: v1beta1.TaskRunStatus{
+				Status: duckv1.Status{
+					ObservedGeneration: 0,
+					Conditions: duckv1.Conditions{{
+						Type:   "Succeeded",
+						Status: corev1.ConditionTrue,
+					}},
+					Annotations: nil,
+				},
+				TaskRunStatusFields: v1beta1.TaskRunStatusFields{
+					StartTime:      &metav1.Time{Time: time.Now().UTC().Add(5 * time.Second)},
+					CompletionTime: &metav1.Time{Time: time.Now().UTC().Add(10 * time.Second)},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "test-taskrun-1",
+				Namespace:         "test-namespace",
+				CreationTimestamp: metav1.NewTime(time.Now().UTC()),
+			},
+			Status: v1beta1.TaskRunStatus{
+				Status: duckv1.Status{
+					ObservedGeneration: 0,
+					Conditions: duckv1.Conditions{{
+						Type:   "Failed",
+						Status: corev1.ConditionTrue,
+					}},
+					Annotations: nil,
+				},
+				TaskRunStatusFields: v1beta1.TaskRunStatusFields{
+					StartTime:      &metav1.Time{Time: time.Now().UTC().Add(5 * time.Second)},
+					CompletionTime: &metav1.Time{Time: time.Now().UTC().Add(10 * time.Second)},
+				},
+			},
+		},
+	}
+
+	for _, tr := range mockTaskRuns {
+		want := 5
+		got := int(calculateScheduledDurationTaskRun(tr))
 
 		if got != want {
 			t.Errorf("Scheduled Duration is not as expected. Got %d, expected %d", got, want)

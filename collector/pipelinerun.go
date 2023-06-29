@@ -3,7 +3,9 @@ package collector
 import (
 	"context"
 	"fmt"
+	"os"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"strconv"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 
@@ -17,11 +19,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-type ReconcilePipelineRun struct {
+type ReconcilePipelineRunScheduled struct {
 	client        client.Client
 	scheme        *runtime.Scheme
 	eventRecorder record.EventRecorder
-	psCollector   *PipelineServiceCollector
+	prCollector   *PipelineRunScheduledCollector
 }
 
 type startTimeEventFilter struct {
@@ -53,16 +55,16 @@ func (f *startTimeEventFilter) Generic(event.GenericEvent) bool {
 }
 
 func SetupPipelineRunScheduleDurationController(mgr ctrl.Manager) error {
-	reconciler := &ReconcilePipelineRun{
+	reconciler := &ReconcilePipelineRunScheduled{
 		client:        mgr.GetClient(),
 		scheme:        mgr.GetScheme(),
-		eventRecorder: mgr.GetEventRecorderFor("MetricExporterPipelineRuns"),
-		psCollector:   NewCollector(),
+		eventRecorder: mgr.GetEventRecorderFor("MetricExporterPipelineRunsScheduled"),
+		prCollector:   NewPipelineRunScheduledCollector(),
 	}
 	return ctrl.NewControllerManagedBy(mgr).For(&v1beta1.PipelineRun{}).WithEventFilter(&startTimeEventFilter{}).Complete(reconciler)
 }
 
-func (r *ReconcilePipelineRun) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcilePipelineRunScheduled) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(ctx)
 	defer cancel()
@@ -81,6 +83,94 @@ func (r *ReconcilePipelineRun) Reconcile(ctx context.Context, request reconcile.
 
 	// based on our WithEventFilter we should only be getting called with the start time is set
 	log.V(4).Info(fmt.Sprintf("recording schedule duration for %q", request.NamespacedName))
-	r.psCollector.bumpScheduledDuration(pr.Namespace, calculateScheduledDuration(pr))
+	r.prCollector.bumpScheduledDuration(pr, calculateScheduledDurationPipelineRun(pr))
+	return reconcile.Result{}, nil
+}
+
+type ReconcilePipelineRunTaskRunGap struct {
+	client        client.Client
+	scheme        *runtime.Scheme
+	eventRecorder record.EventRecorder
+	prCollector   *PipelineRunTaskRunGapCollector
+}
+
+type taskRunGapEventFilter struct {
+}
+
+func (f *taskRunGapEventFilter) Create(event.CreateEvent) bool {
+	return false
+}
+
+func (f *taskRunGapEventFilter) Delete(event.DeleteEvent) bool {
+	return false
+}
+
+func (f *taskRunGapEventFilter) Update(e event.UpdateEvent) bool {
+
+	//TODO remember, keep track of when pipeline-service and RHTAP starts moving from v1beta1 to v1
+	oldPR, okold := e.ObjectOld.(*v1beta1.PipelineRun)
+	newPR, oknew := e.ObjectNew.(*v1beta1.PipelineRun)
+	// the real-time filtering involes retrieving the taskruns that are childs of this pipelinerun, so we only
+	// calculate when the pipelinerun transtions to done, and then compare the kinds
+	if okold && oknew {
+		if !oldPR.IsDone() && !oldPR.IsCancelled() && (newPR.IsDone() || newPR.IsCancelled()) {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *taskRunGapEventFilter) Generic(event.GenericEvent) bool {
+	return false
+}
+
+func optionalMetricEnabled(envVarName string) bool {
+	env := os.Getenv(envVarName)
+	enabled := len(env) > 0
+	// any random setting means true
+	if enabled {
+		// allow for users to turn off by setting to false
+		bv, err := strconv.ParseBool(env)
+		if err == nil && !bv {
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+func SetupPipelineRunTaskRunGapController(mgr ctrl.Manager) error {
+	if !optionalMetricEnabled(ENABLE_GAP_METRIC) {
+		return nil
+	}
+	reconciler := &ReconcilePipelineRunTaskRunGap{
+		client:        mgr.GetClient(),
+		scheme:        mgr.GetScheme(),
+		eventRecorder: mgr.GetEventRecorderFor("MetricExporterPipelineRunsTaskRunGap"),
+		prCollector:   NewPipelineRunTaskRunGapCollector(),
+	}
+	return ctrl.NewControllerManagedBy(mgr).For(&v1beta1.PipelineRun{}).WithEventFilter(&taskRunGapEventFilter{}).Complete(reconciler)
+}
+
+func (r *ReconcilePipelineRunTaskRunGap) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithCancel(ctx)
+	defer cancel()
+	log := log.FromContext(ctx)
+
+	//TODO remember, keep track of when pipeline-service and RHTAP starts moving from v1beta1 to v1
+	pr := &v1beta1.PipelineRun{}
+	err := r.client.Get(ctx, types.NamespacedName{Namespace: request.Namespace, Name: request.Name}, pr)
+	if err != nil && !errors.IsNotFound(err) {
+		return reconcile.Result{}, err
+	}
+	if err != nil {
+		log.V(4).Info(fmt.Sprintf("ignoring deleted pipelinerun %q", request.NamespacedName))
+		return reconcile.Result{}, nil
+	}
+
+	// based on our WithEventFilter we should only be getting called with the start time is set
+	log.V(4).Info(fmt.Sprintf("recording taskrun gap for %q", request.NamespacedName))
+	r.prCollector.bumpGapDuration(pr, r.client, ctx)
 	return reconcile.Result{}, nil
 }
