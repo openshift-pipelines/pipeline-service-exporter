@@ -55,9 +55,7 @@ func main() {
 	flag.StringVar(&metricsPath, "telemetry-path", "/metrics", "Path at which pipeline-service metrics are exported.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 
-	opts := zap.Options{
-		Development: true,
-	}
+	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
 	klog.InitFlags(flag.CommandLine)
 	flag.Parse()
