@@ -18,20 +18,20 @@ package collector
 
 import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"time"
 )
 
-func calculateScheduledDuration(pipelineRun *v1beta1.PipelineRun) float64 {
-	var durationScheduled float64
-
-	// Fetch the creation and scheduled times
-	createdTime := pipelineRun.ObjectMeta.CreationTimestamp.Time
-	startTime := pipelineRun.Status.StartTime.Time
-
-	// Check if either one of these values is zero
-	if createdTime.IsZero() || startTime.IsZero() {
+func calcuateScheduledDuration(created, started time.Time) float64 {
+	if created.IsZero() || started.IsZero() {
 		return 0
 	}
+	return started.Sub(created).Seconds()
+}
 
-	durationScheduled = startTime.Sub(createdTime).Seconds()
-	return durationScheduled
+func calculateScheduledDurationPipelineRun(pipelineRun *v1beta1.PipelineRun) float64 {
+	return calcuateScheduledDuration(pipelineRun.CreationTimestamp.Time, pipelineRun.Status.StartTime.Time)
+}
+
+func calculateScheduledDurationTaskRun(taskrun *v1beta1.TaskRun) float64 {
+	return calcuateScheduledDuration(taskrun.CreationTimestamp.Time, taskrun.Status.StartTime.Time)
 }

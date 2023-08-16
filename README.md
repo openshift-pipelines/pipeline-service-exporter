@@ -8,6 +8,10 @@ With this exporter, we can track important metrics such as PipelineRun durations
 
 The exporter is designed to integrate into Stonesoup Monitoring dashboards, allowing easy monitoring and visualization of the metrics that are most important.
 
+The exporter also allows for configuration of both which metrics are maintained and which labels are utilized for a given metric.
+
+See [the metrics specification](docs/metrics-specification.md) for details.
+
 ### Development Mode
 
 Make sure to set the KUBECONFIG env variable to point to the kubeconfig of your kubernetes cluster.

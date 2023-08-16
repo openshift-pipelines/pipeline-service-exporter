@@ -38,10 +38,6 @@ var (
 	promlogConfig *promlog.Config
 )
 
-const (
-	exporterName = "pipeline_service_exporter"
-)
-
 func init() {
 	promlogConfig = &promlog.Config{}
 }
