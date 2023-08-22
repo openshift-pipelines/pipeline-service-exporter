@@ -20,12 +20,13 @@ import (
 	"context"
 	"fmt"
 	"os"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"strconv"
+	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
@@ -33,7 +34,7 @@ import (
 const (
 	ENABLE_PIPELINERUN_SCHEDULED_DURATION_PIPELINENAME_LABEL = "ENABLE_PIPELINERUN_SCHEDULED_DURATION_PIPELINENAME_LABEL"
 	ENABLE_TASKRUN_SCHEDULED_DURATION_TASKNAME_LABEL         = "ENABLE_TASKRUN_SCHEDULED_DURATION_TASKNAME_LABEL"
-	ENABLE_GAP_METRIC                                        = "ENABLE_GAP_METRIC"
+	ENABLE_GAP_METRIC_ADDITIONAL_LABELS                      = "ENABLE_GAP_METRIC_ADDITIONAL_LABELS"
 	NS_LABEL                                                 = "namespace"
 	PIPELINE_NAME_LABEL                                      = "pipelinename"
 	TASK_NAME_LABEL                                          = "taskname"
@@ -47,7 +48,8 @@ type PipelineRunScheduledCollector struct {
 }
 
 type PipelineRunTaskRunGapCollector struct {
-	trGaps *prometheus.HistogramVec
+	trGaps           *prometheus.HistogramVec
+	additionalLabels bool
 }
 
 type TaskRunCollector struct {
@@ -68,6 +70,82 @@ func optionalLabelEnabled(labelName string) bool {
 		return true
 	}
 	return false
+}
+
+func pipelineRunPipelineRef(pr *v1beta1.PipelineRun) string {
+	val := ""
+	ref := pr.Spec.PipelineRef
+	if ref != nil {
+		val = ref.Name
+		if len(val) == 0 {
+			for _, p := range ref.Params {
+				if strings.TrimSpace(p.Name) == "name" {
+					return p.Value.StringVal
+				}
+			}
+		}
+	} else {
+		if len(pr.GenerateName) > 0 {
+			return pr.GenerateName
+		}
+		// at this point, the pipelinerun name should not have any random aspects, and is
+		// essentially a constant, with a minimal cardinality impact
+		val = pr.Name
+	}
+	return val
+}
+
+func taskRunTaskRef(tr *v1beta1.TaskRun, pr *v1beta1.PipelineRun) string {
+	val := ""
+	ref := tr.Spec.TaskRef
+	if ref != nil {
+		val = ref.Name
+		if len(val) == 0 {
+			for _, p := range ref.Params {
+				if strings.TrimSpace(p.Name) == "name" {
+					return p.Value.StringVal
+				}
+			}
+		}
+	} else {
+		if len(tr.GenerateName) > 0 {
+			return tr.GenerateName
+		}
+		if pr != nil {
+			if pr.Spec.PipelineSpec != nil {
+				ps := pr.Spec.PipelineSpec
+				if ps != nil {
+					for _, t := range ps.Tasks {
+						name := t.Name
+						suffix := fmt.Sprintf("-%s", name)
+						if len(suffix) < 2 {
+							for _, p := range t.Params {
+								if p.Name == "name" {
+									name = p.Value.StringVal
+									suffix = fmt.Sprintf("-%s", name)
+									break
+								}
+							}
+						}
+						if strings.HasSuffix(tr.Name, suffix) {
+							return name
+						}
+
+					}
+				}
+			}
+			for _, t := range pr.Spec.TaskRunSpecs {
+				suffix := fmt.Sprintf("-%s", t.PipelineTaskName)
+				if strings.HasSuffix(tr.Name, suffix) {
+					return t.PipelineTaskName
+				}
+			}
+		}
+		// at this point, the taskrun name should not have any random aspects, and is
+		// essentially a constant, with a minimal cardinality impact
+		val = tr.Name
+	}
+	return val
 }
 
 func NewPipelineRunScheduledCollector() *PipelineRunScheduledCollector {
@@ -95,32 +173,29 @@ func NewPipelineRunScheduledCollector() *PipelineRunScheduledCollector {
 
 func (c *PipelineRunScheduledCollector) bumpScheduledDuration(pr *v1beta1.PipelineRun, scheduleDuration float64) {
 	labels := map[string]string{NS_LABEL: pr.Namespace}
-	switch {
-	case c.prSchedNameLabel:
-		val := ""
-		if pr.Spec.PipelineRef != nil {
-			val = pr.Spec.PipelineRef.Name
-		} else {
-			val = pr.Name
-		}
-		labels[PIPELINE_NAME_LABEL] = val
-
+	if c.prSchedNameLabel {
+		labels[PIPELINE_NAME_LABEL] = pipelineRunPipelineRef(pr)
 	}
 	c.durationScheduled.With(labels).Observe(scheduleDuration)
 }
 
 func NewPipelineRunTaskRunGapCollector() *PipelineRunTaskRunGapCollector {
 	labelNames := []string{NS_LABEL}
+	additionalLabels := optionalMetricEnabled(ENABLE_GAP_METRIC_ADDITIONAL_LABELS)
+	if additionalLabels {
+		labelNames = append(labelNames, PIPELINE_NAME_LABEL, COMPLETED_LABEL, UPCOMING_LABEL)
+	}
 	trGaps := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "pipelinerun_duration_between_taskruns_milliseconds",
 		Help: "Duration in milliseconds between a taskrun completing and the next taskrun being created within a pipelinerun.  If a pipelinerun only has one taskrun, use pipelinerun_duration_scheduled_seconds.",
 		// reminder: exponential buckets need a start value greater than 0
 		// the results in buckets of 0.1, 0.5, 2.5, 12.5, 62.5, 312.5 milliseconds
 		Buckets: prometheus.ExponentialBuckets(0.1, 5, 6),
-	}, append(labelNames, PIPELINE_NAME_LABEL, COMPLETED_LABEL, UPCOMING_LABEL))
+	}, labelNames)
 
 	pipelineRunTaskRunGapCollector := &PipelineRunTaskRunGapCollector{
-		trGaps: trGaps,
+		trGaps:           trGaps,
+		additionalLabels: additionalLabels,
 	}
 	metrics.Registry.MustRegister(trGaps)
 
@@ -129,13 +204,9 @@ func NewPipelineRunTaskRunGapCollector() *PipelineRunTaskRunGapCollector {
 
 func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun, oc client.Client, ctx context.Context) {
 	labels := map[string]string{NS_LABEL: pr.Namespace}
-	val := ""
-	if pr.Spec.PipelineRef != nil {
-		val = pr.Spec.PipelineRef.Name
-	} else {
-		val = pr.Name
+	if c.additionalLabels {
+		labels[PIPELINE_NAME_LABEL] = pipelineRunPipelineRef(pr)
 	}
-	labels[PIPELINE_NAME_LABEL] = val
 
 	if len(pr.Status.ChildReferences) < 2 {
 		return
@@ -153,8 +224,10 @@ func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun
 				continue
 			}
 			gap := kid.CreationTimestamp.Time.Sub(pr.CreationTimestamp.Time)
-			labels[COMPLETED_LABEL] = pr.Name
-			labels[UPCOMING_LABEL] = kid.Name
+			if c.additionalLabels {
+				labels[COMPLETED_LABEL] = pipelineRunPipelineRef(pr)
+				labels[UPCOMING_LABEL] = taskRunTaskRef(kid, pr)
+			}
 			c.trGaps.With(labels).Observe(float64(gap.Milliseconds()))
 			continue
 		}
@@ -177,8 +250,10 @@ func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun
 		}
 
 		gap := kid.CreationTimestamp.Time.Sub(prevKid.Status.CompletionTime.Time).Milliseconds()
-		labels[COMPLETED_LABEL] = prevKidRef.Name
-		labels[UPCOMING_LABEL] = kidRef.Name
+		if c.additionalLabels {
+			labels[COMPLETED_LABEL] = taskRunTaskRef(prevKid, pr)
+			labels[UPCOMING_LABEL] = taskRunTaskRef(kid, pr)
+		}
 		c.trGaps.With(labels).Observe(float64(gap))
 	}
 
