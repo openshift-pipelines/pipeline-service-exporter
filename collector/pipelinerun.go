@@ -140,9 +140,6 @@ func optionalMetricEnabled(envVarName string) bool {
 }
 
 func SetupPipelineRunTaskRunGapController(mgr ctrl.Manager) error {
-	if !optionalMetricEnabled(ENABLE_GAP_METRIC) {
-		return nil
-	}
 	reconciler := &ReconcilePipelineRunTaskRunGap{
 		client:        mgr.GetClient(),
 		scheme:        mgr.GetScheme(),
