@@ -19,16 +19,17 @@ package collector
 import (
 	"context"
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
+	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
 )
 
 const (
@@ -186,7 +187,7 @@ func NewPipelineRunTaskRunGapCollector() *PipelineRunTaskRunGapCollector {
 		labelNames = append(labelNames, PIPELINE_NAME_LABEL, COMPLETED_LABEL, UPCOMING_LABEL)
 	}
 	trGaps := prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "pipelinerun_duration_between_taskruns_milliseconds",
+		Name: "pipelinerun_gap_between_taskruns_milliseconds",
 		Help: "Duration in milliseconds between a taskrun completing and the next taskrun being created within a pipelinerun.  If a pipelinerun only has one taskrun, use pipelinerun_duration_scheduled_seconds.",
 		// reminder: exponential buckets need a start value greater than 0
 		// the results in buckets of 0.1, 0.5, 2.5, 12.5, 62.5, 312.5 milliseconds
@@ -203,56 +204,113 @@ func NewPipelineRunTaskRunGapCollector() *PipelineRunTaskRunGapCollector {
 }
 
 func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun, oc client.Client, ctx context.Context) {
-	labels := map[string]string{NS_LABEL: pr.Namespace}
-	if c.additionalLabels {
-		labels[PIPELINE_NAME_LABEL] = pipelineRunPipelineRef(pr)
+	if len(pr.Status.ChildReferences) < 1 {
+		return
 	}
-
-	if len(pr.Status.ChildReferences) < 2 {
+	// in case there are gaps between a pipelinerun being marked done but the complete timestamp is not set, with the
+	// understanding that the complete timestamp is not processed before any completed taskrun complete timestamps have been processed
+	if pr.Status.CompletionTime == nil {
 		return
 	}
 
-	for index, kidRef := range pr.Status.ChildReferences {
+	sortedTaskRunsByCreateTimes := []*v1beta1.TaskRun{}
+	reverseOrderSortedTaskRunsByCompletionTimes := []*v1beta1.TaskRun{}
+	// prior testing in staging proved that with enough concurrency, this array is minimally not sorted based on when
+	// the task runs were created, so we explicitly sort for that; also, this sorting will allow us to effectively
+	// address parallel taskruns vs. taskrun dependencies and ordering (where tekton does not create a taskrun until its dependencies
+	// have completed).
+	for _, kidRef := range pr.Status.ChildReferences {
 		if kidRef.Kind != "TaskRun" {
-			continue
-		}
-		if index == 0 {
-			kid := &v1beta1.TaskRun{}
-			err := oc.Get(ctx, types.NamespacedName{Namespace: pr.Namespace, Name: kidRef.Name}, kid)
-			if err != nil {
-				ctrl.Log.Info(fmt.Sprintf("could not calcuate gap for taskrun %s:%s: %s", pr.Namespace, kidRef.Name, err.Error()))
-				continue
-			}
-			gap := kid.CreationTimestamp.Time.Sub(pr.CreationTimestamp.Time)
-			if c.additionalLabels {
-				labels[COMPLETED_LABEL] = pipelineRunPipelineRef(pr)
-				labels[UPCOMING_LABEL] = taskRunTaskRef(kid, pr)
-			}
-			c.trGaps.With(labels).Observe(float64(gap.Milliseconds()))
-			continue
-		}
-
-		prevKidRef := pr.Status.ChildReferences[index-1]
-		if prevKidRef.Kind != "TaskRun" {
 			continue
 		}
 		kid := &v1beta1.TaskRun{}
 		err := oc.Get(ctx, types.NamespacedName{Namespace: pr.Namespace, Name: kidRef.Name}, kid)
 		if err != nil {
-			ctrl.Log.Info(fmt.Sprintf("could not calcuate gap for taskrun %s:%s: %s", pr.Namespace, kidRef.Name, err.Error()))
-			continue
-		}
-		prevKid := &v1beta1.TaskRun{}
-		err = oc.Get(ctx, types.NamespacedName{Namespace: pr.Namespace, Name: prevKidRef.Name}, prevKid)
-		if err != nil {
-			ctrl.Log.Info(fmt.Sprintf("could not calcuate gap for taskrun %s:%s: %s", pr.Namespace, prevKidRef.Name, err.Error()))
+			ctrl.Log.Info(fmt.Sprintf("could not calculate gap for taskrun %s:%s: %s", pr.Namespace, kidRef.Name, err.Error()))
 			continue
 		}
 
-		gap := kid.CreationTimestamp.Time.Sub(prevKid.Status.CompletionTime.Time).Milliseconds()
+		sortedTaskRunsByCreateTimes = append(sortedTaskRunsByCreateTimes, kid)
+		// don't add taskruns that did not complete i.e. presumably timed out of failed; any taskruns that dependended
+		// on should not have even been created
+		if kid.Status.CompletionTime != nil {
+			reverseOrderSortedTaskRunsByCompletionTimes = append(reverseOrderSortedTaskRunsByCompletionTimes, kid)
+
+		}
+	}
+	sort.SliceStable(sortedTaskRunsByCreateTimes, func(i, j int) bool {
+		return sortedTaskRunsByCreateTimes[i].CreationTimestamp.Time.Before(sortedTaskRunsByCreateTimes[j].CreationTimestamp.Time)
+	})
+	sort.SliceStable(reverseOrderSortedTaskRunsByCompletionTimes, func(i, j int) bool {
+		return reverseOrderSortedTaskRunsByCompletionTimes[i].Status.CompletionTime.Time.After(reverseOrderSortedTaskRunsByCompletionTimes[j].Status.CompletionTime.Time)
+	})
+	prRef := pipelineRunPipelineRef(pr)
+	for index, tr := range sortedTaskRunsByCreateTimes {
+		labels := map[string]string{NS_LABEL: pr.Namespace}
 		if c.additionalLabels {
-			labels[COMPLETED_LABEL] = taskRunTaskRef(prevKid, pr)
-			labels[UPCOMING_LABEL] = taskRunTaskRef(kid, pr)
+			labels[PIPELINE_NAME_LABEL] = prRef
+		}
+
+		if index == 0 {
+			ctrl.Log.V(4).Info(fmt.Sprintf("first task %s for pipeline %s", taskRunTaskRef(tr, pr), prRef))
+			// our first task is simple, just work off of the pipelinerun
+			gap := tr.CreationTimestamp.Time.Sub(pr.CreationTimestamp.Time).Milliseconds()
+			if c.additionalLabels {
+				labels[COMPLETED_LABEL] = prRef
+				labels[UPCOMING_LABEL] = taskRunTaskRef(tr, pr)
+			}
+			c.trGaps.With(labels).Observe(float64(gap))
+			continue
+		}
+
+		firstKid := sortedTaskRunsByCreateTimes[0]
+
+		// so using the first taskrun completion time addresses sequential / chaining dependencies;
+		// for parallel, if the first taskrun's completion time is not after this taskrun's create time,
+		// that means parallel taskruns, and we work off of the pipelinerun; NOTE: this focuses on "top level" parallel task runs
+		// with absolutely no dependencies.  Once any sort of dependency is established, there are no more top level parallel taskruns.
+		if firstKid.Status.CompletionTime != nil && firstKid.Status.CompletionTime.Time.After(tr.CreationTimestamp.Time) {
+			ctrl.Log.V(4).Info(fmt.Sprintf("task %s considered parallel for pipeline %s", taskRunTaskRef(tr, pr), prRef))
+			gap := tr.CreationTimestamp.Time.Sub(pr.CreationTimestamp.Time).Milliseconds()
+			if c.additionalLabels {
+				labels[COMPLETED_LABEL] = prRef
+				labels[UPCOMING_LABEL] = taskRunTaskRef(tr, pr)
+			}
+			c.trGaps.With(labels).Observe(float64(gap))
+			continue
+		}
+
+		// Conversely, task run chains can run in parallel, and a taskrun can depend on multiple chains or threads of taskruns. We want to find the chain
+		// that finished last, but before we are created.  We traverse through our reverse sorted on completion time list to determine that.  But yes, we don't reproduce the DAG
+		// graph (there is no clean dependency import path in tekton for that) to confirm the edges.  This approximation is sufficient.
+
+		// get whatever completed first
+		timeToCalculateWith := time.Time{}
+		trToCalculateWith := &v1beta1.TaskRun{}
+		if len(reverseOrderSortedTaskRunsByCompletionTimes) > 0 {
+			trToCalculateWith = reverseOrderSortedTaskRunsByCompletionTimes[len(reverseOrderSortedTaskRunsByCompletionTimes)-1]
+			timeToCalculateWith = trToCalculateWith.Status.CompletionTime.Time
+		} else {
+			// if no taskruns completed, that means any taskruns created were created as part of the initial pipelinerun creation,
+			// so use the pipelinerun creation time
+			timeToCalculateWith = pr.CreationTimestamp.Time
+		}
+		for _, tr2 := range reverseOrderSortedTaskRunsByCompletionTimes {
+			if tr2.Name == tr.Name {
+				continue
+			}
+			ctrl.Log.V(4).Info(fmt.Sprintf("comparing candidate %s to current task %s", taskRunTaskRef(tr2, pr), taskRunTaskRef(tr, pr)))
+			if !tr2.Status.CompletionTime.Time.After(tr.CreationTimestamp.Time) {
+				ctrl.Log.V(4).Info(fmt.Sprintf("%s did not complete after so use it to compute gap for current task %s", taskRunTaskRef(tr2, pr), taskRunTaskRef(tr, pr)))
+				trToCalculateWith = tr2
+				break
+			}
+			ctrl.Log.V(4).Info(fmt.Sprintf("skipping %s as a gap candidate for current task %s is OK", taskRunTaskRef(tr2, pr), taskRunTaskRef(tr, pr)))
+		}
+		gap := tr.CreationTimestamp.Time.Sub(timeToCalculateWith).Milliseconds()
+		if c.additionalLabels {
+			labels[COMPLETED_LABEL] = taskRunTaskRef(trToCalculateWith, pr)
+			labels[UPCOMING_LABEL] = taskRunTaskRef(tr, pr)
 		}
 		c.trGaps.With(labels).Observe(float64(gap))
 	}
