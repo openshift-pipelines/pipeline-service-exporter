@@ -26,7 +26,7 @@ _**Scheduling Duration of different TaskRuns with a PipelineRun:**_
 The time taken in milliseconds between the creation of the first TaskRun and the creation of its PipelineRun, followed by the duration in milliseconds between the completion of a preceding TaskRun and the creation of the following TaskRun.  This metrics currently assumes sequential TaskRuns, and the parallel TaskRuns within a PipelineRun are not employed.  At this time, this metric is disabled by default, but can be enabled by setting the environment variable `ENABLE_GAP_METRIC` to `true`.
 
 _Metric Name:_ pipelinerun_duration_between_taskruns_milliseconds
-_Labels:_ `namespace`, `pipelinename`, `completed`, `upcoming`.  The `pipelinename` label is set to the name of the Pipeline if its reference is set, otherwise the name of the PipelineRun.  The `completed` label is set either the PipelineRun name if we are dealing with the first Taskrun, or the name of the latest TaskRun to be completed.  The `upcoming` label is set to the name of the TaskRun that is created but not yet complete.
+_Labels:_ Minimally a `namespace` label.  If the `ENABLE_GAP_METRIC_ADDITIONAL_LABELS` environment variable is set to `true` on the exporter deployment, the `pipelinename`, `completed`, and `upcoming` labels are set.  The `pipelinename` label is set to the name of the Pipeline if its reference is set, otherwise the name of the PipelineRun.  The `completed` label is set either the Pipeline name if we are dealing with the first TaskRun, or the name of the latest Task for the TaskRun to be completed.  The `upcoming` label is set to the name of the Task of the TaskRun that is created but not yet complete.
 _Data Type_: Histogram
 _Description_: The taken between TaskRuns within a PipelineRun
 
