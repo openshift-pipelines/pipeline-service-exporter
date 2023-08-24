@@ -5,8 +5,19 @@ This document outlines the specifications for a Prometheus exporter that collect
 
 ### Metrics Definition:
 
+_**PipelineRun Failed With PVC Quota:**_  
+The count of the number of current PipelineRuns on the cluster marked failed by Tekton because PVC Quota prevented creation of required PVCs. 
+The deletion of PipelineRuns that failed because of PVC limits is effectively a decrement of the metric.  That said, given the complexities around
+delete events and controllers (missed events not getting relisted, hit and miss success of tombstone objects, multiple events because of finalizers),
+we do not decrement in real time, but on our custom Runnable that resets the metric at the same interval the TektonConfig pruner is set to.
+
+_Metric Name:_ pipelinerun_failed_by_pvc_quota_count
+_Labels:_ `namespace` label.  Note:  K8s PVC quota specifications are a namespace scoped resource.
+_Data Type:_ Gauge
+_Description:_ The number of PipelineRuns marked failed because required PVCs could not be created.
+
 _**PipelineRun Scheduling Duration:**_  
-The duration of time in seconds taken for a PipelineRun to be scheduled, calculated as the difference between the creation timestamp and the start time of the PipelineRun. 
+The duration of time in seconds taken for a PipelineRun to be scheduled, calculated as the difference between the creation timestamp and the start time of the PipelineRun.
 
 _Metric Name:_ pipelinerun_scheduling_duration  
 _Labels:_ Minimally a `namespace` label.  If the `ENABLE_PIPELINERUN_SCHEDULED_DURATION_PIPELINENAME_LABEL` environment variable is set to `true` on the exporter deployment, the `pipelinename` label is set to the name of the Pipeline if its reference is set, otherwise the name of the PipelineRun.

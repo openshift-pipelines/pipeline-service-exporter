@@ -370,7 +370,7 @@ func validateHistogramVec(t *testing.T, h *prometheus.HistogramVec, labels prome
 	}
 }
 
-func validateGaugeVec(t *testing.T, g *prometheus.GaugeVec, labels prometheus.Labels) {
+func validateGaugeVec(t *testing.T, g *prometheus.GaugeVec, labels prometheus.Labels, count float64) {
 	gauge, err := g.GetMetricWith(labels)
 	assert.NoError(t, err)
 	assert.NotNil(t, gauge)
@@ -378,8 +378,7 @@ func validateGaugeVec(t *testing.T, g *prometheus.GaugeVec, labels prometheus.La
 	gauge.Write(metric)
 	assert.NotNil(t, metric.Gauge)
 	assert.NotNil(t, metric.Gauge.Value)
-	assert.NotZero(t, *metric.Gauge.Value)
-	assert.Greater(t, *metric.Gauge.Value, float64(-1))
+	assert.Equal(t, count, *metric.Gauge.Value)
 }
 
 func pipelineRunFromActualRHTAPYaml() ([]v1beta1.PipelineRun, error) {

@@ -53,6 +53,10 @@ type PipelineRunTaskRunGapCollector struct {
 	additionalLabels bool
 }
 
+type ThrottledByPVCQuotaCollector struct {
+	pvcThrottle *prometheus.GaugeVec
+}
+
 type TaskRunCollector struct {
 	durationScheduled *prometheus.HistogramVec
 	trSchedNameLabel  bool
@@ -178,6 +182,29 @@ func (c *PipelineRunScheduledCollector) bumpScheduledDuration(pr *v1beta1.Pipeli
 		labels[PIPELINE_NAME_LABEL] = pipelineRunPipelineRef(pr)
 	}
 	c.durationScheduled.With(labels).Observe(scheduleDuration)
+}
+
+func NewPVCThrottledCollector() *ThrottledByPVCQuotaCollector {
+	labelNames := []string{NS_LABEL}
+	pvcThrottled := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "pipelinerun_failed_by_pvc_quota_count",
+		Help: "Number of PipelineRuns who were marked failed because PVC Resource Quotas prevented the creation of required PVCs",
+	}, labelNames)
+	pvcThrottledCollector := &ThrottledByPVCQuotaCollector{
+		pvcThrottle: pvcThrottled,
+	}
+	metrics.Registry.MustRegister(pvcThrottled)
+	return pvcThrottledCollector
+}
+
+func (c *ThrottledByPVCQuotaCollector) incPVCThrottle(pr *v1beta1.PipelineRun) {
+	labels := map[string]string{NS_LABEL: pr.Namespace}
+	c.pvcThrottle.With(labels).Inc()
+}
+
+func (c *ThrottledByPVCQuotaCollector) zeroPVCThrottle(ns string) {
+	labels := map[string]string{NS_LABEL: ns}
+	c.pvcThrottle.With(labels).Set(float64(0))
 }
 
 func NewPipelineRunTaskRunGapCollector() *PipelineRunTaskRunGapCollector {
