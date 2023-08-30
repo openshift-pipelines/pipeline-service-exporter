@@ -8043,3 +8043,3698 @@ status:
           fi
           exit $RET
 `
+
+const tooBigNumPRYaml = `
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: devfile-sample-
+  annotations:
+    appstudio.openshift.io/snapshot: load-app-7089021e-3585-438c-85e8-0a1ec8381a9f-9thsf
+    results.tekton.dev/record: >-
+      test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45/records/579cdd9f-5dcc-436c-ab9b-eb770530ff45
+    build.appstudio.redhat.com/pipeline_name: docker-build
+    build.appstudio.openshift.io/repo: >-
+      https://github.com/nodeshift-starters/devfile-sample?rev=cb64992eebf5c18900d283a9bca08b4ab5db2874
+    chains.tekton.dev/signed: 'true'
+    results.tekton.dev/result: test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45
+    build.appstudio.redhat.com/target_branch: main
+    results.tekton.dev/childReadyForDeletion: 'true'
+    build.appstudio.redhat.com/bundle: >-
+      quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:docker-build-124dd76239d17a3bdb936ed26e403c9c9c4e947b
+    build.appstudio.redhat.com/commit_sha: cb64992eebf5c18900d283a9bca08b4ab5db2874
+  name: devfile-sample-nsj6m
+  uid: 579cdd9f-5dcc-436c-ab9b-eb770530ff45
+  creationTimestamp: '2023-08-30T19:00:02Z'
+  generation: 1
+  managedFields:
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:labels':
+            'f:pipelines.openshift.io/runtime': {}
+            'f:pipelines.openshift.io/strategy': {}
+            'f:pipelines.openshift.io/used-by': {}
+            'f:tekton.dev/pipeline': {}
+      manager: openshift-pipelines-controller
+      operation: Update
+      time: '2023-08-30T19:00:02Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:status':
+          'f:finallyStartTime': {}
+          'f:pipelineResults': {}
+          'f:conditions': {}
+          .: {}
+          'f:childReferences': {}
+          'f:pipelineSpec':
+            .: {}
+            'f:finally': {}
+            'f:params': {}
+            'f:results': {}
+            'f:tasks': {}
+            'f:workspaces': {}
+          'f:skippedTasks': {}
+          'f:startTime': {}
+          'f:completionTime': {}
+      manager: openshift-pipelines-controller
+      operation: Update
+      subresource: status
+      time: '2023-08-30T19:01:36Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:chains.tekton.dev/signed': {}
+          'f:finalizers':
+            .: {}
+            'v:"chains.tekton.dev/pipelinerun"': {}
+      manager: openshift-pipelines-chains-controller
+      operation: Update
+      time: '2023-08-30T19:01:37Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            .: {}
+            'f:appstudio.openshift.io/snapshot': {}
+            'f:build.appstudio.openshift.io/repo': {}
+            'f:build.appstudio.redhat.com/bundle': {}
+            'f:build.appstudio.redhat.com/commit_sha': {}
+            'f:build.appstudio.redhat.com/pipeline_name': {}
+            'f:build.appstudio.redhat.com/target_branch': {}
+          'f:generateName': {}
+          'f:labels':
+            .: {}
+            'f:appstudio.openshift.io/application': {}
+            'f:appstudio.openshift.io/component': {}
+            'f:pipelines.appstudio.openshift.io/type': {}
+          'f:ownerReferences':
+            .: {}
+            'k:{"uid":"efeffdc5-984c-43ec-9707-65ebccc85011"}': {}
+        'f:spec':
+          .: {}
+          'f:params': {}
+          'f:pipelineRef':
+            .: {}
+            'f:bundle': {}
+            'f:name': {}
+          'f:workspaces': {}
+      manager: manager
+      operation: Update
+      time: '2023-08-30T19:01:38Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:results.tekton.dev/childReadyForDeletion': {}
+            'f:results.tekton.dev/record': {}
+            'f:results.tekton.dev/result': {}
+      manager: watcher
+      operation: Update
+      time: '2023-08-30T19:01:41Z'
+  namespace: test-rhtap-95-tenant
+  ownerReferences:
+    - apiVersion: appstudio.redhat.com/v1alpha1
+      kind: Component
+      name: devfile-sample
+      uid: efeffdc5-984c-43ec-9707-65ebccc85011
+  finalizers:
+    - chains.tekton.dev/pipelinerun
+  labels:
+    appstudio.openshift.io/application: load-app-7089021e-3585-438c-85e8-0a1ec8381a9f
+    appstudio.openshift.io/component: devfile-sample
+    pipelines.appstudio.openshift.io/type: build
+    pipelines.openshift.io/runtime: generic
+    pipelines.openshift.io/strategy: docker
+    pipelines.openshift.io/used-by: build-cloud
+    tekton.dev/pipeline: docker-build
+spec:
+  params:
+    - name: dockerfile
+      value: Dockerfile
+    - name: git-url
+      value: 'https://github.com/nodeshift-starters/devfile-sample.git'
+    - name: output-image
+      value: >-
+        quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+    - name: path-context
+      value: .
+    - name: revision
+      value: main
+    - name: skip-checks
+      value: 'true'
+  pipelineRef:
+    bundle: >-
+      quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:docker-build-124dd76239d17a3bdb936ed26e403c9c9c4e947b
+    name: docker-build
+  serviceAccountName: appstudio-pipeline
+  timeout: 1h0m0s
+  workspaces:
+    - name: workspace
+      volumeClaimTemplate:
+        metadata:
+          creationTimestamp: null
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+        status: {}
+status:
+  childReferences:
+    - apiVersion: tekton.dev/v1beta1
+      kind: TaskRun
+      name: devfile-sample-nsj6m-init
+      pipelineTaskName: init
+    - apiVersion: tekton.dev/v1beta1
+      kind: TaskRun
+      name: devfile-sample-nsj6m-clone-repository
+      pipelineTaskName: clone-repository
+      whenExpressions:
+        - input: $(tasks.init.results.build)
+          operator: in
+          values:
+            - 'true'
+    - apiVersion: tekton.dev/v1beta1
+      kind: TaskRun
+      name: devfile-sample-nsj6m-build-container
+      pipelineTaskName: build-container
+      whenExpressions:
+        - input: $(tasks.init.results.build)
+          operator: in
+          values:
+            - 'true'
+    - apiVersion: tekton.dev/v1beta1
+      kind: TaskRun
+      name: devfile-sample-nsj6m-show-sbom
+      pipelineTaskName: show-sbom
+    - apiVersion: tekton.dev/v1beta1
+      kind: TaskRun
+      name: devfile-sample-nsj6m-show-summary
+      pipelineTaskName: show-summary
+  completionTime: '2023-08-30T19:01:36Z'
+  conditions:
+    - lastTransitionTime: '2023-08-30T19:01:36Z'
+      message: 'Tasks Completed: 5 (Failed: 0, Cancelled 0), Skipped: 7'
+      reason: Completed
+      status: 'True'
+      type: Succeeded
+  finallyStartTime: '2023-08-30T19:01:30Z'
+  pipelineResults:
+    - name: IMAGE_URL
+      value: >-
+        quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+    - name: IMAGE_DIGEST
+      value: 'sha256:9cc2777884b232b63f67c352ba96866edac8cf35fc14a87107bfcf64faaff7db'
+    - name: CHAINS-GIT_URL
+      value: 'https://github.com/nodeshift-starters/devfile-sample.git'
+    - name: CHAINS-GIT_COMMIT
+      value: cb64992eebf5c18900d283a9bca08b4ab5db2874
+    - name: JAVA_COMMUNITY_DEPENDENCIES
+      value: ''
+  pipelineSpec:
+    finally:
+      - name: show-sbom
+        params:
+          - name: IMAGE_URL
+            value: $(tasks.build-container.results.IMAGE_URL)
+        taskRef:
+          kind: Task
+          params:
+            - name: name
+              value: show-sbom
+            - name: bundle
+              value: >-
+                quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:show-sbom-0.1@sha256:7db0af43dcebaeb33e34413148370e17078c30fd2fc78fb84c8941b444199f36
+            - name: kind
+              value: task
+          resolver: bundles
+        status:
+          completionTime: '2023-08-30T19:01:36Z'
+          conditions:
+            - lastTransitionTime: '2023-08-30T19:01:36Z'
+              message: All Steps have completed executing
+              reason: Succeeded
+              status: 'True'
+              type: Succeeded
+          podName: devfile-sample-nsj6m-show-sbom-pod
+          startTime: '2023-08-30T19:01:30Z'
+          steps:
+            - container: step-show-sbom
+              imageID: >-
+                quay.io/redhat-appstudio/cosign@sha256:c883d6f8d39148f2cea71bff4622d196d89df3e510f36c140c097b932f0dd5d5
+              name: show-sbom
+              terminated:
+                containerID: >-
+                  cri-o://6b18d743bb70bdc2ccb2dbb37d80571ed897fca535ace395329032e68983abd7
+                exitCode: 0
+                finishedAt: '2023-08-30T19:01:36Z'
+                reason: Completed
+                startedAt: '2023-08-30T19:01:35Z'
+          taskSpec:
+            description: >-
+              Shows the Software Bill of Materials (SBOM) generated for the
+              built image in CyloneDX JSON format.
+            params:
+              - description: Fully qualified image name to show SBOM for.
+                name: IMAGE_URL
+                type: string
+            steps:
+              - env:
+                  - name: IMAGE_URL
+                    value: >-
+                      quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+                image: 'quay.io/redhat-appstudio/cosign:v2.1.1'
+                name: show-sbom
+                resources: {}
+                script: |
+                  #!/busybox/sh
+                  cosign download sbom $IMAGE_URL 2>err
+                  RET=$?
+                  if [ $RET -ne 0 ]; then
+                    echo Failed to get SBOM >&2
+                    cat err >&2
+                  fi
+                  exit $RET
+          duration: 6s
+          reason: Succeeded
+      - name: show-summary
+        params:
+          - name: pipelinerun-name
+            value: devfile-sample-nsj6m
+          - name: git-url
+            value: >-
+              $(tasks.clone-repository.results.url)?rev=$(tasks.clone-repository.results.commit)
+          - name: image-url
+            value: >-
+              quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+          - name: build-task-status
+            value: $(tasks.build-container.status)
+        taskRef:
+          kind: Task
+          params:
+            - name: name
+              value: summary
+            - name: bundle
+              value: >-
+                quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:summary-0.1@sha256:e69f53a3991d7088d8aa2827365ab761ab7524d4269f296b4a78b0f085789d30
+            - name: kind
+              value: task
+          resolver: bundles
+        status:
+          completionTime: '2023-08-30T19:01:36Z'
+          conditions:
+            - lastTransitionTime: '2023-08-30T19:01:36Z'
+              message: All Steps have completed executing
+              reason: Succeeded
+              status: 'True'
+              type: Succeeded
+          podName: devfile-sample-nsj6m-show-summary-pod
+          startTime: '2023-08-30T19:01:30Z'
+          steps:
+            - container: step-appstudio-summary
+              imageID: >-
+                registry.access.redhat.com/ubi9/ubi-minimal@sha256:dc02c6aa8199beb8ed13312d7116a94aa87b5412886bbe358845d3f0626c0f1e
+              name: appstudio-summary
+              terminated:
+                containerID: >-
+                  cri-o://149f69bd03f32d573735805c98eb57f5ef7de8dd4e91a207a084bbe1f60b907d
+                exitCode: 0
+                finishedAt: '2023-08-30T19:01:35Z'
+                reason: Completed
+                startedAt: '2023-08-30T19:01:35Z'
+          taskSpec:
+            description: >-
+              Summary Pipeline Task. Prints PipelineRun information, removes
+              image repository secret used by the PipelineRun.
+            params:
+              - description: pipeline-run to annotate
+                name: pipelinerun-name
+                type: string
+              - description: Git URL
+                name: git-url
+                type: string
+              - description: Image URL
+                name: image-url
+                type: string
+              - default: Succeeded
+                description: State of build task in pipelineRun
+                name: build-task-status
+                type: string
+            steps:
+              - env:
+                  - name: GIT_URL
+                    value: >-
+                      https://github.com/nodeshift-starters/devfile-sample.git?rev=cb64992eebf5c18900d283a9bca08b4ab5db2874
+                  - name: IMAGE_URL
+                    value: >-
+                      quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+                  - name: PIPELINERUN_NAME
+                    value: devfile-sample-nsj6m
+                  - name: BUILD_TASK_STATUS
+                    value: Succeeded
+                image: >-
+                  registry.access.redhat.com/ubi9/ubi-minimal:9.2-717@sha256:dc02c6aa8199beb8ed13312d7116a94aa87b5412886bbe358845d3f0626c0f1e
+                name: appstudio-summary
+                resources: {}
+                script: |
+                  #!/usr/bin/env bash
+                  echo
+                  echo "Build Summary:"
+                  echo
+                  echo "Build repository: $GIT_URL"
+                  if [ "$BUILD_TASK_STATUS" == "Succeeded" ]; then
+                    echo "Generated Image is in : $IMAGE_URL"
+                  fi
+                  echo
+                  echo End Summary
+          duration: 6s
+          reason: Succeeded
+    params:
+      - description: Source Repository URL
+        name: git-url
+        type: string
+      - default: ''
+        description: Revision of the Source Repository
+        name: revision
+        type: string
+      - description: Fully Qualified Output Image
+        name: output-image
+        type: string
+      - default: .
+        description: The path to your source code
+        name: path-context
+        type: string
+      - default: Dockerfile
+        description: Path to the Dockerfile
+        name: dockerfile
+        type: string
+      - default: 'false'
+        description: Force rebuild image
+        name: rebuild
+        type: string
+      - default: 'false'
+        description: Skip checks against built image
+        name: skip-checks
+        type: string
+      - default: 'true'
+        description: 'Skip optional checks, set false if you want to run optional checks'
+        name: skip-optional
+        type: string
+      - default: 'false'
+        description: Execute the build with network isolation
+        name: hermetic
+        type: string
+      - default: ''
+        description: Build dependencies to be prefetched by Cachi2
+        name: prefetch-input
+        type: string
+      - default: 'false'
+        description: Java build
+        name: java
+        type: string
+      - default: ''
+        description: >-
+          Image tag expiration time, time values could be something like 1h, 2d,
+          3w for hours, days, and weeks, respectively.
+        name: image-expires-after
+        type: string
+    results:
+      - description: ''
+        name: IMAGE_URL
+        value: $(tasks.build-container.results.IMAGE_URL)
+      - description: ''
+        name: IMAGE_DIGEST
+        value: $(tasks.build-container.results.IMAGE_DIGEST)
+      - description: ''
+        name: CHAINS-GIT_URL
+        value: $(tasks.clone-repository.results.url)
+      - description: ''
+        name: CHAINS-GIT_COMMIT
+        value: $(tasks.clone-repository.results.commit)
+      - description: ''
+        name: JAVA_COMMUNITY_DEPENDENCIES
+        value: $(tasks.build-container.results.JAVA_COMMUNITY_DEPENDENCIES)
+    tasks:
+      - name: init
+        params:
+          - name: image-url
+            value: >-
+              quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+          - name: rebuild
+            value: 'false'
+          - name: skip-checks
+            value: 'true'
+          - name: skip-optional
+            value: 'true'
+          - name: pipelinerun-name
+            value: devfile-sample-nsj6m
+          - name: pipelinerun-uid
+            value: 579cdd9f-5dcc-436c-ab9b-eb770530ff45
+        taskRef:
+          kind: Task
+          params:
+            - name: name
+              value: init
+            - name: bundle
+              value: >-
+                quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:init-0.1@sha256:26586a7ef08c3e86dfdaf0a5cc38dd3d70c4c02db1331b469caaed0a0f5b3d86
+            - name: kind
+              value: task
+          resolver: bundles
+        status:
+          completionTime: '2023-08-30T19:00:09Z'
+          conditions:
+            - lastTransitionTime: '2023-08-30T19:00:09Z'
+              message: All Steps have completed executing
+              reason: Succeeded
+              status: 'True'
+              type: Succeeded
+          podName: devfile-sample-nsj6m-init-pod
+          startTime: '2023-08-30T19:00:04Z'
+          steps:
+            - container: step-init
+              imageID: >-
+                registry.redhat.io/openshift4/ose-cli@sha256:73df37794ffff7de1101016c23dc623e4990810390ebdabcbbfa065214352c7c
+              name: init
+              terminated:
+                containerID: >-
+                  cri-o://916f5f33bbb4819b281ba24ab276c20524c3ff33ad0fa86c213924255cadf59f
+                exitCode: 0
+                finishedAt: '2023-08-30T19:00:08Z'
+                message: >-
+                  [{"key":"build","value":"true","type":1},{"key":"container-registry-secret","value":"unused\n","type":1}]
+                reason: Completed
+                startedAt: '2023-08-30T19:00:08Z'
+          taskResults:
+            - name: build
+              type: string
+              value: 'true'
+            - name: container-registry-secret
+              type: string
+              value: |
+                unused
+          taskSpec:
+            description: >-
+              Initialize Pipeline Task, include flags for rebuild and auth.
+              Generates image repository secret used by the PipelineRun.
+            params:
+              - description: Image URL for build by PipelineRun
+                name: image-url
+                type: string
+              - default: 'false'
+                description: Rebuild the image if exists
+                name: rebuild
+                type: string
+              - default: 'false'
+                description: Skip checks against built image
+                name: skip-checks
+                type: string
+              - default: 'true'
+                description: >-
+                  Skip optional checks, set false if you want to run optional
+                  checks
+                name: skip-optional
+                type: string
+              - default: ''
+                description: 'unused, should be removed in next task version'
+                name: pipelinerun-name
+                type: string
+              - default: ''
+                description: 'unused, should be removed in next task version'
+                name: pipelinerun-uid
+                type: string
+            results:
+              - description: Defines if the image in param image-url should be built
+                name: build
+                type: string
+              - description: 'unused, should be removed in next task version'
+                name: container-registry-secret
+                type: string
+            steps:
+              - env:
+                  - name: IMAGE_URL
+                    value: >-
+                      quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+                  - name: REBUILD
+                    value: 'false'
+                  - name: SKIP_CHECKS
+                    value: 'true'
+                  - name: SKIP_OPTIONAL
+                    value: 'true'
+                image: >-
+                  registry.redhat.io/openshift4/ose-cli:4.13@sha256:73df37794ffff7de1101016c23dc623e4990810390ebdabcbbfa065214352c7c
+                name: init
+                resources: {}
+                script: >
+                  #!/bin/bash
+
+                  echo "Build Initialize: $IMAGE_URL"
+
+                  echo
+
+
+                  echo "Determine if Image Already Exists"
+
+                  # Build the image when image does not exists or rebuild is set
+                  to true
+
+                  if ! oc image info $IMAGE_URL &>/dev/null || [ "$REBUILD" ==
+                  "true" ] || [ "$SKIP_CHECKS" == "false" ]; then
+                    echo -n "true" > /tekton/results/build
+                  else
+                    echo -n "false" > /tekton/results/build
+                  fi
+
+                  echo unused > /tekton/results/container-registry-secret
+          duration: 5s
+          reason: Succeeded
+      - name: clone-repository
+        params:
+          - name: url
+            value: 'https://github.com/nodeshift-starters/devfile-sample.git'
+          - name: revision
+            value: main
+        runAfter:
+          - init
+        taskRef:
+          kind: Task
+          params:
+            - name: name
+              value: git-clone
+            - name: bundle
+              value: >-
+                quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:git-clone-0.1@sha256:1f84973a21aabea38434b1f663abc4cb2d86565a9c7aae1f90decb43a8fa48eb
+            - name: kind
+              value: task
+          resolver: bundles
+        when:
+          - input: $(tasks.init.results.build)
+            operator: in
+            values:
+              - 'true'
+        workspaces:
+          - name: output
+            workspace: workspace
+          - name: basic-auth
+            workspace: git-auth
+        status:
+          completionTime: '2023-08-30T19:00:29Z'
+          conditions:
+            - lastTransitionTime: '2023-08-30T19:00:29Z'
+              message: All Steps have completed executing
+              reason: Succeeded
+              status: 'True'
+              type: Succeeded
+          podName: devfile-sample-nsj6m-clone-repository-pod
+          startTime: '2023-08-30T19:00:09Z'
+          steps:
+            - container: step-clone
+              imageID: >-
+                registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8@sha256:2fa0b06d52b04f377c696412e19307a9eff27383f81d87aae0b4f71672a1cd0b
+              name: clone
+              terminated:
+                containerID: >-
+                  cri-o://2f18fd7be23d4e6ac18bd3066b7f4efbedb0d4527f29c321ccf50e5b3187ae8d
+                exitCode: 0
+                finishedAt: '2023-08-30T19:00:28Z'
+                message: >-
+                  [{"key":"commit","value":"cb64992eebf5c18900d283a9bca08b4ab5db2874","type":1},{"key":"url","value":"https://github.com/nodeshift-starters/devfile-sample.git","type":1}]
+                reason: Completed
+                startedAt: '2023-08-30T19:00:27Z'
+            - container: step-symlink-check
+              imageID: >-
+                registry.redhat.io/ubi9@sha256:089bd3b82a78ac45c0eed231bb58bfb43bfcd0560d9bba240fc6355502c92976
+              name: symlink-check
+              terminated:
+                containerID: >-
+                  cri-o://1492a8338e20bcc7897d81af16d33e47ca26a51b45e1c238ff657610b48a243a
+                exitCode: 0
+                finishedAt: '2023-08-30T19:00:28Z'
+                message: >-
+                  [{"key":"commit","value":"cb64992eebf5c18900d283a9bca08b4ab5db2874","type":1},{"key":"url","value":"https://github.com/nodeshift-starters/devfile-sample.git","type":1}]
+                reason: Completed
+                startedAt: '2023-08-30T19:00:28Z'
+          taskResults:
+            - name: commit
+              type: string
+              value: cb64992eebf5c18900d283a9bca08b4ab5db2874
+            - name: url
+              type: string
+              value: 'https://github.com/nodeshift-starters/devfile-sample.git'
+          taskSpec:
+            description: >-
+              The git-clone Task will clone a repo from the provided url into
+              the output Workspace. By default the repo will be cloned into the
+              root of your Workspace.
+            params:
+              - description: Repository URL to clone from.
+                name: url
+                type: string
+              - default: ''
+                description: 'Revision to checkout. (branch, tag, sha, ref, etc...)'
+                name: revision
+                type: string
+              - default: ''
+                description: Refspec to fetch before checking out revision.
+                name: refspec
+                type: string
+              - default: 'true'
+                description: Initialize and fetch git submodules.
+                name: submodules
+                type: string
+              - default: '1'
+                description: >-
+                  Perform a shallow clone, fetching only the most recent N
+                  commits.
+                name: depth
+                type: string
+              - default: 'true'
+                description: >-
+                  Set the http.sslVerify global git config. Setting this to
+                  false is not advised unless you are sure that you trust your
+                  git remote.
+                name: sslVerify
+                type: string
+              - default: ''
+                description: >-
+                  Subdirectory inside the output Workspace to clone the repo
+                  into.
+                name: subdirectory
+                type: string
+              - default: ''
+                description: >-
+                  Define the directory patterns to match or exclude when
+                  performing a sparse checkout.
+                name: sparseCheckoutDirectories
+                type: string
+              - default: 'true'
+                description: >-
+                  Clean out the contents of the destination directory if it
+                  already exists before cloning.
+                name: deleteExisting
+                type: string
+              - default: ''
+                description: HTTP proxy server for non-SSL requests.
+                name: httpProxy
+                type: string
+              - default: ''
+                description: HTTPS proxy server for SSL requests.
+                name: httpsProxy
+                type: string
+              - default: ''
+                description: Opt out of proxying HTTP/HTTPS requests.
+                name: noProxy
+                type: string
+              - default: 'true'
+                description: >-
+                  Log the commands that are executed during git-clone's
+                  operation.
+                name: verbose
+                type: string
+              - default: >-
+                  registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8:v1.8.2-8@sha256:a538c423e7a11aae6ae582a411fdb090936458075f99af4ce5add038bb6983e8
+                description: The image providing the git-init binary that this Task runs.
+                name: gitInitImage
+                type: string
+              - default: /tekton/home
+                description: >
+                  Absolute path to the user's home directory. Set this
+                  explicitly if you are running the image as a non-root user or
+                  have overridden
+
+                  the gitInitImage param with an image containing custom user
+                  configuration.
+                name: userHome
+                type: string
+              - default: 'true'
+                description: >
+                  Check symlinks in the repo. If they're pointing outside of the
+                  repo, the build will fail.
+                name: enableSymlinkCheck
+                type: string
+            results:
+              - description: The precise commit SHA that was fetched by this Task.
+                name: commit
+                type: string
+              - description: The precise URL that was fetched by this Task.
+                name: url
+                type: string
+            steps:
+              - env:
+                  - name: HOME
+                    value: /tekton/home
+                  - name: PARAM_URL
+                    value: 'https://github.com/nodeshift-starters/devfile-sample.git'
+                  - name: PARAM_REVISION
+                    value: main
+                  - name: PARAM_REFSPEC
+                  - name: PARAM_SUBMODULES
+                    value: 'true'
+                  - name: PARAM_DEPTH
+                    value: '1'
+                  - name: PARAM_SSL_VERIFY
+                    value: 'true'
+                  - name: PARAM_SUBDIRECTORY
+                  - name: PARAM_DELETE_EXISTING
+                    value: 'true'
+                  - name: PARAM_HTTP_PROXY
+                  - name: PARAM_HTTPS_PROXY
+                  - name: PARAM_NO_PROXY
+                  - name: PARAM_VERBOSE
+                    value: 'true'
+                  - name: PARAM_SPARSE_CHECKOUT_DIRECTORIES
+                  - name: PARAM_USER_HOME
+                    value: /tekton/home
+                  - name: WORKSPACE_OUTPUT_PATH
+                    value: /workspace/output
+                  - name: WORKSPACE_SSH_DIRECTORY_BOUND
+                    value: 'false'
+                  - name: WORKSPACE_SSH_DIRECTORY_PATH
+                  - name: WORKSPACE_BASIC_AUTH_DIRECTORY_BOUND
+                    value: 'false'
+                  - name: WORKSPACE_BASIC_AUTH_DIRECTORY_PATH
+                image: >-
+                  registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8:v1.8.2-8@sha256:a538c423e7a11aae6ae582a411fdb090936458075f99af4ce5add038bb6983e8
+                name: clone
+                resources: {}
+                script: >
+                  #!/usr/bin/env sh
+
+                  set -eu
+
+
+                  if [ "${PARAM_VERBOSE}" = "true" ] ; then
+                    set -x
+                  fi
+
+
+                  if [ "${WORKSPACE_BASIC_AUTH_DIRECTORY_BOUND}" = "true" ] ;
+                  then
+                    if [ -f "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.git-credentials" ] && [ -f "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.gitconfig" ]; then
+                      cp "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.git-credentials" "${PARAM_USER_HOME}/.git-credentials"
+                      cp "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.gitconfig" "${PARAM_USER_HOME}/.gitconfig"
+                    # Compatibility with kubernetes.io/basic-auth secrets
+                    elif [ -f "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/username" ] && [ -f "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/password" ]; then
+                      HOSTNAME=$(echo $PARAM_URL | awk -F/ '{print $3}')
+                      echo "https://$(cat ${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/username):$(cat ${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/password)@$HOSTNAME" > "${PARAM_USER_HOME}/.git-credentials"
+                      echo -e "[credential \"https://$HOSTNAME\"]\n  helper = store" > "${PARAM_USER_HOME}/.gitconfig"
+                    else
+                      echo "Unknown basic-auth workspace format"
+                      exit 1
+                    fi
+                    chmod 400 "${PARAM_USER_HOME}/.git-credentials"
+                    chmod 400 "${PARAM_USER_HOME}/.gitconfig"
+                  fi
+
+
+                  if [ "${WORKSPACE_SSH_DIRECTORY_BOUND}" = "true" ] ; then
+                    cp -R "${WORKSPACE_SSH_DIRECTORY_PATH}" "${PARAM_USER_HOME}"/.ssh
+                    chmod 700 "${PARAM_USER_HOME}"/.ssh
+                    chmod -R 400 "${PARAM_USER_HOME}"/.ssh/*
+                  fi
+
+
+                  CHECKOUT_DIR="${WORKSPACE_OUTPUT_PATH}/${PARAM_SUBDIRECTORY}"
+
+
+                  cleandir() {
+                    # Delete any existing contents of the repo directory if it exists.
+                    #
+                    # We don't just "rm -rf ${CHECKOUT_DIR}" because ${CHECKOUT_DIR} might be "/"
+                    # or the root of a mounted volume.
+                    if [ -d "${CHECKOUT_DIR}" ] ; then
+                      # Delete non-hidden files and directories
+                      rm -rf "${CHECKOUT_DIR:?}"/*
+                      # Delete files and directories starting with . but excluding ..
+                      rm -rf "${CHECKOUT_DIR}"/.[!.]*
+                      # Delete files and directories starting with .. plus any other character
+                      rm -rf "${CHECKOUT_DIR}"/..?*
+                    fi
+                  }
+
+
+                  if [ "${PARAM_DELETE_EXISTING}" = "true" ] ; then
+                    cleandir
+                  fi
+
+
+                  test -z "${PARAM_HTTP_PROXY}" || export
+                  HTTP_PROXY="${PARAM_HTTP_PROXY}"
+
+                  test -z "${PARAM_HTTPS_PROXY}" || export
+                  HTTPS_PROXY="${PARAM_HTTPS_PROXY}"
+
+                  test -z "${PARAM_NO_PROXY}" || export
+                  NO_PROXY="${PARAM_NO_PROXY}"
+
+
+                  /ko-app/git-init \
+                    -url="${PARAM_URL}" \
+                    -revision="${PARAM_REVISION}" \
+                    -refspec="${PARAM_REFSPEC}" \
+                    -path="${CHECKOUT_DIR}" \
+                    -sslVerify="${PARAM_SSL_VERIFY}" \
+                    -submodules="${PARAM_SUBMODULES}" \
+                    -depth="${PARAM_DEPTH}" \
+                    -sparseCheckoutDirectories="${PARAM_SPARSE_CHECKOUT_DIRECTORIES}"
+                  cd "${CHECKOUT_DIR}"
+
+                  RESULT_SHA="$(git rev-parse HEAD)"
+
+                  EXIT_CODE="$?"
+
+                  if [ "${EXIT_CODE}" != 0 ] ; then
+                    exit "${EXIT_CODE}"
+                  fi
+
+                  printf "%s" "${RESULT_SHA}" > "/tekton/results/commit"
+
+                  printf "%s" "${PARAM_URL}" > "/tekton/results/url"
+                securityContext:
+                  runAsUser: 0
+              - env:
+                  - name: PARAM_ENABLE_SYMLINK_CHECK
+                    value: 'true'
+                  - name: PARAM_SUBDIRECTORY
+                  - name: WORKSPACE_OUTPUT_PATH
+                    value: /workspace/output
+                image: 'registry.redhat.io/ubi9:9.2-696'
+                name: symlink-check
+                resources: {}
+                script: |
+                  #!/usr/bin/env bash
+                  set -euo pipefail
+
+                  CHECKOUT_DIR="${WORKSPACE_OUTPUT_PATH}/${PARAM_SUBDIRECTORY}"
+                  check_symlinks() {
+                    FOUND_SYMLINK_POINTING_OUTSIDE_OF_REPO=false
+                    while read symlink
+                    do
+                      target=$(readlink -f "$symlink")
+                      if ! [[ "$target" =~ ^$CHECKOUT_DIR ]]; then
+                        echo "The cloned repository contains symlink pointing outside of the cloned repository: $symlink"
+                        FOUND_SYMLINK_POINTING_OUTSIDE_OF_REPO=true
+                      fi
+                    done < <(find $CHECKOUT_DIR -type l -print)
+                    if [ "$FOUND_SYMLINK_POINTING_OUTSIDE_OF_REPO" = true ] ; then
+                      return 1
+                    fi
+                  }
+
+                  if [ "${PARAM_ENABLE_SYMLINK_CHECK}" = "true" ] ; then
+                    echo "Running symlink check"
+                    check_symlinks
+                  fi
+            workspaces:
+              - description: >-
+                  The git repo will be cloned onto the volume backing this
+                  Workspace.
+                name: output
+              - description: >
+                  A .ssh directory with private key, known_hosts, config, etc.
+                  Copied to
+
+                  the user's home before git commands are executed. Used to
+                  authenticate
+
+                  with the git remote when performing the clone. Binding a
+                  Secret to this
+
+                  Workspace is strongly recommended over other volume types.
+                name: ssh-directory
+                optional: true
+              - description: >
+                  A Workspace containing a .gitconfig and .git-credentials file
+                  or username and password.
+
+                  These will be copied to the user's home before any git
+                  commands are run. Any
+
+                  other files in this Workspace are ignored. It is strongly
+                  recommended
+
+                  to use ssh-directory over basic-auth whenever possible and to
+                  bind a
+
+                  Secret to this Workspace over other volume types.
+                name: basic-auth
+                optional: true
+          duration: 20s
+          reason: Succeeded
+      - name: prefetch-dependencies
+        params:
+          - name: input
+            value: ''
+        runAfter:
+          - clone-repository
+        taskRef:
+          kind: Task
+          params:
+            - name: name
+              value: prefetch-dependencies
+            - name: bundle
+              value: >-
+                quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:prefetch-dependencies-0.1@sha256:c7b7f13d5d2a1545e95c2d56521327001d56ba54645900db41aa414607eff1e5
+            - name: kind
+              value: task
+          resolver: bundles
+        when:
+          - input: 'false'
+            operator: in
+            values:
+              - 'true'
+        workspaces:
+          - name: source
+            workspace: workspace
+        status:
+          reason: Skipped
+      - name: build-container
+        params:
+          - name: IMAGE
+            value: >-
+              quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+          - name: DOCKERFILE
+            value: Dockerfile
+          - name: CONTEXT
+            value: .
+          - name: HERMETIC
+            value: 'false'
+          - name: PREFETCH_INPUT
+            value: ''
+          - name: IMAGE_EXPIRES_AFTER
+            value: ''
+          - name: COMMIT_SHA
+            value: $(tasks.clone-repository.results.commit)
+        runAfter:
+          - prefetch-dependencies
+        taskRef:
+          kind: Task
+          params:
+            - name: name
+              value: buildah
+            - name: bundle
+              value: >-
+                quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:buildah-0.1@sha256:bfb5edabab8128e24608df608448b9392fd0a2b61ac05a53e83aa60d8929b73f
+            - name: kind
+              value: task
+          resolver: bundles
+        when:
+          - input: $(tasks.init.results.build)
+            operator: in
+            values:
+              - 'true'
+        workspaces:
+          - name: source
+            workspace: workspace
+        status:
+          completionTime: '2023-08-30T19:01:30Z'
+          conditions:
+            - lastTransitionTime: '2023-08-30T19:01:30Z'
+              message: All Steps have completed executing
+              reason: Succeeded
+              status: 'True'
+              type: Succeeded
+          podName: devfile-sample-nsj6m-build-container-pod
+          startTime: '2023-08-30T19:00:29Z'
+          steps:
+            - container: step-build
+              imageID: >-
+                quay.io/redhat-appstudio/buildah@sha256:381e9bfedd59701477621da93892106873a6951b196105d3d2d85c3f6d7b569b
+              name: build
+              terminated:
+                containerID: >-
+                  cri-o://24d9f9c59f1c0fe114d05b1c29ac7209c3d3482716cc740f4783c8903c4721fb
+                exitCode: 0
+                finishedAt: '2023-08-30T19:01:16Z'
+                reason: Completed
+                startedAt: '2023-08-30T19:00:50Z'
+            - container: step-sbom-syft-generate
+              imageID: >-
+                quay.io/redhat-appstudio/syft@sha256:244a17ce220a0b7a54c862c4fe3b72ce92799910c5eff8e94ac2f121fa5b4a53
+              name: sbom-syft-generate
+              terminated:
+                containerID: >-
+                  cri-o://cb51f07d379e15f8a8755bfb84428ff60de6989f0a0c2a1de3fa07927b09ec2c
+                exitCode: 0
+                finishedAt: '2023-08-30T19:01:18Z'
+                reason: Completed
+                startedAt: '2023-08-30T19:01:16Z'
+            - container: step-analyse-dependencies-java-sbom
+              imageID: >-
+                quay.io/redhat-appstudio/hacbs-jvm-build-request-processor@sha256:b198cf4b33dab59ce8ac25afd4e1001390db29ca2dec83dc8a1e21b0359ce743
+              name: analyse-dependencies-java-sbom
+              terminated:
+                containerID: >-
+                  cri-o://b7448e62a57890749446e24a4f7f51ea2fa6333d9616c1193f4f92d9728e8fe6
+                exitCode: 0
+                finishedAt: '2023-08-30T19:01:18Z'
+                message: '[{"key":"JAVA_COMMUNITY_DEPENDENCIES","value":"","type":1}]'
+                reason: Completed
+                startedAt: '2023-08-30T19:01:18Z'
+            - container: step-merge-syft-sboms
+              imageID: >-
+                registry.access.redhat.com/ubi9/python-39@sha256:562b4f9cd4e5abeba54c56fd2290096a71f6e10aa8c1c18f43c9d6962c2d4d41
+              name: merge-syft-sboms
+              terminated:
+                containerID: >-
+                  cri-o://7082cb7ddc3c629dca86aac4b5ae553eeb09960402ff503b49753b4f8c1ef7a1
+                exitCode: 0
+                finishedAt: '2023-08-30T19:01:19Z'
+                message: '[{"key":"JAVA_COMMUNITY_DEPENDENCIES","value":"","type":1}]'
+                reason: Completed
+                startedAt: '2023-08-30T19:01:18Z'
+            - container: step-merge-cachi2-sbom
+              imageID: >-
+                quay.io/redhat-appstudio/cachi2@sha256:46097f22b57e4d48a3fce96d931e08ccfe3a3e6421362d5f9353961279078eef
+              name: merge-cachi2-sbom
+              terminated:
+                containerID: >-
+                  cri-o://543053c4be3079d0d266d494b520852f15d3329a5b2e5ab36f12ffb138eac2e5
+                exitCode: 0
+                finishedAt: '2023-08-30T19:01:19Z'
+                message: '[{"key":"JAVA_COMMUNITY_DEPENDENCIES","value":"","type":1}]'
+                reason: Completed
+                startedAt: '2023-08-30T19:01:19Z'
+            - container: step-create-purl-sbom
+              imageID: >-
+                registry.access.redhat.com/ubi9/python-39@sha256:562b4f9cd4e5abeba54c56fd2290096a71f6e10aa8c1c18f43c9d6962c2d4d41
+              name: create-purl-sbom
+              terminated:
+                containerID: >-
+                  cri-o://7e41fead679f12a2291dc1c1d59c4fff229cfd7f17cebea7381aa9dd2c6472a5
+                exitCode: 0
+                finishedAt: '2023-08-30T19:01:19Z'
+                message: '[{"key":"JAVA_COMMUNITY_DEPENDENCIES","value":"","type":1}]'
+                reason: Completed
+                startedAt: '2023-08-30T19:01:19Z'
+            - container: step-inject-sbom-and-push
+              imageID: >-
+                registry.access.redhat.com/ubi9/buildah@sha256:c8b1d312815452964885680fc5bc8d99b3bfe9b6961228c71a09c72ca8e915eb
+              name: inject-sbom-and-push
+              terminated:
+                containerID: >-
+                  cri-o://f17b5f541734bb1c60ba25aa733925f009345ba2b47d77ff25b5c8d28f08802b
+                exitCode: 0
+                finishedAt: '2023-08-30T19:01:27Z'
+                message: >-
+                  [{"key":"BASE_IMAGES_DIGESTS","value":"registry.access.redhat.com/ubi8/nodejs-18:latest@sha256:8a634a49c4e8d1753cddd3c047a4324d405fd2f6723f67b7ac274bb5fe72ff44\nregistry.access.redhat.com/ubi8/nodejs-18-minimal:latest@sha256:a1372e99afe18a64b9dbb70612452efe02e934db136fba00ba1da417ede408a0\n","type":1},{"key":"IMAGE_DIGEST","value":"sha256:9cc2777884b232b63f67c352ba96866edac8cf35fc14a87107bfcf64faaff7db","type":1},{"key":"IMAGE_URL","value":"quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002","type":1},{"key":"JAVA_COMMUNITY_DEPENDENCIES","value":"","type":1}]
+                reason: Completed
+                startedAt: '2023-08-30T19:01:19Z'
+            - container: step-upload-sbom
+              imageID: >-
+                quay.io/redhat-appstudio/cosign@sha256:c883d6f8d39148f2cea71bff4622d196d89df3e510f36c140c097b932f0dd5d5
+              name: upload-sbom
+              terminated:
+                containerID: >-
+                  cri-o://bb40ca2fda83463cac9034e8c9f46279270d77df5f591f86cbac30eae8e9408f
+                exitCode: 0
+                finishedAt: '2023-08-30T19:01:29Z'
+                message: >-
+                  [{"key":"BASE_IMAGES_DIGESTS","value":"registry.access.redhat.com/ubi8/nodejs-18:latest@sha256:8a634a49c4e8d1753cddd3c047a4324d405fd2f6723f67b7ac274bb5fe72ff44\nregistry.access.redhat.com/ubi8/nodejs-18-minimal:latest@sha256:a1372e99afe18a64b9dbb70612452efe02e934db136fba00ba1da417ede408a0\n","type":1},{"key":"IMAGE_DIGEST","value":"sha256:9cc2777884b232b63f67c352ba96866edac8cf35fc14a87107bfcf64faaff7db","type":1},{"key":"IMAGE_URL","value":"quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002","type":1},{"key":"JAVA_COMMUNITY_DEPENDENCIES","value":"","type":1}]
+                reason: Completed
+                startedAt: '2023-08-30T19:01:28Z'
+          taskResults:
+            - name: JAVA_COMMUNITY_DEPENDENCIES
+              type: string
+              value: ''
+            - name: BASE_IMAGES_DIGESTS
+              type: string
+              value: >
+                registry.access.redhat.com/ubi8/nodejs-18:latest@sha256:8a634a49c4e8d1753cddd3c047a4324d405fd2f6723f67b7ac274bb5fe72ff44
+
+                registry.access.redhat.com/ubi8/nodejs-18-minimal:latest@sha256:a1372e99afe18a64b9dbb70612452efe02e934db136fba00ba1da417ede408a0
+            - name: IMAGE_DIGEST
+              type: string
+              value: >-
+                sha256:9cc2777884b232b63f67c352ba96866edac8cf35fc14a87107bfcf64faaff7db
+            - name: IMAGE_URL
+              type: string
+              value: >-
+                quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+          taskSpec:
+            description: >-
+              Buildah task builds source code into a container image and pushes
+              the image into container registry using buildah tool.
+
+              In addition it generates a SBOM file, injects the SBOM file into
+              final container image and pushes the SBOM file as separate image
+              using cosign tool.
+
+              When [Java dependency
+              rebuild](https://redhat-appstudio.github.io/docs.stonesoup.io/Documentation/main/cli/proc_enabled_java_dependencies.html)
+              is enabled it triggers rebuilds of Java artifacts.
+
+              When prefetch-dependencies task was activated it is using its
+              artifacts to run build in hermetic environment.
+            params:
+              - description: Reference of the image buildah will produce.
+                name: IMAGE
+                type: string
+              - default: >-
+                  registry.access.redhat.com/ubi9/buildah:9.0.0-19@sha256:c8b1d312815452964885680fc5bc8d99b3bfe9b6961228c71a09c72ca8e915eb
+                description: The location of the buildah builder image.
+                name: BUILDER_IMAGE
+                type: string
+              - default: ./Dockerfile
+                description: Path to the Dockerfile to build.
+                name: DOCKERFILE
+                type: string
+              - default: .
+                description: Path to the directory to use as context.
+                name: CONTEXT
+                type: string
+              - default: 'true'
+                description: >-
+                  Verify the TLS on the registry endpoint (for push/pull to a
+                  non-TLS registry)
+                name: TLSVERIFY
+                type: string
+              - default: ''
+                description: 'unused, should be removed in next task version'
+                name: DOCKER_AUTH
+                type: string
+              - default: 'false'
+                description: Determines if build will be executed without network access.
+                name: HERMETIC
+                type: string
+              - default: ''
+                description: >-
+                  In case it is not empty, the prefetched content should be made
+                  available to the build.
+                name: PREFETCH_INPUT
+                type: string
+              - default: ''
+                description: >-
+                  Delete image tag after specified time. Empty means to keep the
+                  image tag. Time values could be something like 1h, 2d, 3w for
+                  hours, days, and weeks, respectively.
+                name: IMAGE_EXPIRES_AFTER
+                type: string
+              - default: ''
+                description: The image is built from this commit.
+                name: COMMIT_SHA
+                type: string
+            results:
+              - description: Digest of the image just built
+                name: IMAGE_DIGEST
+                type: string
+              - description: Image repository where the built image was pushed
+                name: IMAGE_URL
+                type: string
+              - description: Digests of the base images used for build
+                name: BASE_IMAGES_DIGESTS
+                type: string
+              - description: The counting of Java components by publisher in JSON format
+                name: SBOM_JAVA_COMPONENTS_COUNT
+                type: string
+              - description: >-
+                  The Java dependencies that came from community sources such as
+                  Maven central.
+                name: JAVA_COMMUNITY_DEPENDENCIES
+                type: string
+            stepTemplate:
+              env:
+                - name: BUILDAH_FORMAT
+                  value: oci
+                - name: STORAGE_DRIVER
+                  value: vfs
+                - name: HERMETIC
+                  value: 'false'
+                - name: PREFETCH_INPUT
+                - name: CONTEXT
+                  value: .
+                - name: DOCKERFILE
+                  value: Dockerfile
+                - name: IMAGE
+                  value: >-
+                    quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+                - name: TLSVERIFY
+                  value: 'true'
+                - name: IMAGE_EXPIRES_AFTER
+              name: ''
+              resources: {}
+            steps:
+              - env:
+                  - name: COMMIT_SHA
+                    value: cb64992eebf5c18900d283a9bca08b4ab5db2874
+                image: 'quay.io/redhat-appstudio/buildah:v1.28'
+                name: build
+                resources:
+                  limits:
+                    cpu: '2'
+                    memory: 4Gi
+                  requests:
+                    cpu: 250m
+                    memory: 512Mi
+                script: >
+                  if [ -e "$CONTEXT/$DOCKERFILE" ]; then
+                    dockerfile_path="$CONTEXT/$DOCKERFILE"
+                  elif [ -e "$DOCKERFILE" ]; then
+                    dockerfile_path="$DOCKERFILE"
+                  elif echo "$DOCKERFILE" | grep -q "^https\?://"; then
+                    echo "Fetch Dockerfile from $DOCKERFILE"
+                    dockerfile_path=$(mktemp --suffix=-Dockerfile)
+                    http_code=$(curl -s -L -w "%{http_code}" --output "$dockerfile_path" "$DOCKERFILE")
+                    if [ $http_code != 200 ]; then
+                      echo "No Dockerfile is fetched. Server responds $http_code"
+                      exit 1
+                    fi
+                    http_code=$(curl -s -L -w "%{http_code}" --output "$dockerfile_path.dockerignore.tmp" "$DOCKERFILE.dockerignore")
+                    if [ $http_code = 200 ]; then
+                      echo "Fetched .dockerignore from $DOCKERFILE.dockerignore"
+                      mv "$dockerfile_path.dockerignore.tmp" $CONTEXT/.dockerignore
+                    fi
+                  else
+                    echo "Cannot find Dockerfile $DOCKERFILE"
+                    exit 1
+                  fi
+
+                  if [ -n "$JVM_BUILD_WORKSPACE_ARTIFACT_CACHE_PORT_80_TCP_ADDR"
+                  ] && grep -q '^\s*RUN \(./\)\?mvn' "$dockerfile_path"; then
+                    sed -i -e "s|^\s*RUN \(\(./\)\?mvn\(.*\)\)|RUN echo \"<settings><mirrors><mirror><id>mirror.default</id><url>http://$JVM_BUILD_WORKSPACE_ARTIFACT_CACHE_PORT_80_TCP_ADDR/v1/cache/default/0/</url><mirrorOf>*</mirrorOf></mirror></mirrors></settings>\" > /tmp/settings.yaml; \1 -s /tmp/settings.yaml|g" "$dockerfile_path"
+                    touch /var/lib/containers/java
+                  fi
+
+
+                  # Fixing group permission on /var/lib/containers
+
+                  chown root:root /var/lib/containers
+
+
+                  sed -i 's/^\s*short-name-mode\s*=\s*.*/short-name-mode =
+                  "disabled"/' /etc/containers/registries.conf
+
+
+                  # Setting new namespace to run buildah - 2^32-2
+
+                  echo 'root:1:4294967294' | tee -a /etc/subuid >> /etc/subgid
+
+
+                  if [ "${HERMETIC}" == "true" ]; then
+                    BUILDAH_ARGS="--pull=never"
+                    UNSHARE_ARGS="--net"
+                    for image in $(grep -i '^\s*FROM' "$dockerfile_path" | sed 's/--platform=\S*//' | awk '{print $2}'); do
+                      unshare -Ufp --keep-caps -r --map-users 1,1,65536 --map-groups 1,1,65536 -- buildah pull $image
+                    done
+                    echo "Build will be executed with network isolation"
+                  fi
+
+
+                  if [ -n "${PREFETCH_INPUT}" ]; then
+                    mv cachi2 /tmp/
+                    chmod -R go+rwX /tmp/cachi2
+                    VOLUME_MOUNTS="--volume /tmp/cachi2:/cachi2"
+                    sed -i 's|^\s*run |RUN . /cachi2/cachi2.env \&\& \\\n    |i' "$dockerfile_path"
+                    echo "Prefetched content will be made available"
+                  fi
+
+
+                  LABELS=(
+                    "--label" "build-date=$(date -u +'%Y-%m-%dT%H:%M:%S')"
+                    "--label" "architecture=$(uname -m)"
+                    "--label" "vcs-type=git"
+                  )
+
+                  [ -n "$COMMIT_SHA" ] && LABELS+=("--label"
+                  "vcs-ref=$COMMIT_SHA")
+
+                  [ -n "$IMAGE_EXPIRES_AFTER" ] && LABELS+=("--label"
+                  "quay.expires-after=$IMAGE_EXPIRES_AFTER")
+
+
+                  unshare -Uf $UNSHARE_ARGS --keep-caps -r --map-users 1,1,65536
+                  --map-groups 1,1,65536 -- buildah build \
+                    $VOLUME_MOUNTS \
+                    $BUILDAH_ARGS \
+                    ${LABELS[@]} \
+                    --tls-verify=$TLSVERIFY --no-cache \
+                    --ulimit nofile=4096:4096 \
+                    -f "$dockerfile_path" -t $IMAGE $CONTEXT
+
+                  container=$(buildah from --pull-never $IMAGE)
+
+                  buildah mount $container | tee /workspace/container_path
+
+                  echo $container > /workspace/container_name
+
+
+                  # Save the SBOM produced by Cachi2 so it can be merged into
+                  the final SBOM later
+
+                  if [ -n "${PREFETCH_INPUT}" ]; then
+                    cp /tmp/cachi2/output/bom.json ./sbom-cachi2.json
+                  fi
+                securityContext:
+                  capabilities:
+                    add:
+                      - SETFCAP
+                volumeMounts:
+                  - mountPath: /var/lib/containers
+                    name: varlibcontainers
+                workingDir: /workspace/source
+              - image: 'quay.io/redhat-appstudio/syft:v0.85.0'
+                name: sbom-syft-generate
+                resources: {}
+                script: >
+                  syft dir:/workspace/source
+                  --file=/workspace/source/sbom-source.json
+                  --output=cyclonedx-json
+
+                  find $(cat /workspace/container_path) -xtype l -delete
+
+                  syft dir:$(cat /workspace/container_path)
+                  --file=/workspace/source/sbom-image.json
+                  --output=cyclonedx-json
+                volumeMounts:
+                  - mountPath: /var/lib/containers
+                    name: varlibcontainers
+              - image: >-
+                  quay.io/redhat-appstudio/hacbs-jvm-build-request-processor:1d417e6f1f3e68c6c537333b5759796eddae0afc
+                name: analyse-dependencies-java-sbom
+                resources: {}
+                script: |
+                  if [ -f /var/lib/containers/java ]; then
+                    /opt/jboss/container/java/run/run-java.sh analyse-dependencies path $(cat /workspace/container_path) -s /workspace/source/sbom-image.json --task-run-name devfile-sample-nsj6m-build-container --publishers /tekton/results/SBOM_JAVA_COMPONENTS_COUNT
+                    sed -i 's/^/ /' /tekton/results/SBOM_JAVA_COMPONENTS_COUNT # Workaround for SRVKP-2875
+                  else
+                    touch /tekton/results/JAVA_COMMUNITY_DEPENDENCIES
+                  fi
+                securityContext:
+                  runAsUser: 0
+                volumeMounts:
+                  - mountPath: /var/lib/containers
+                    name: varlibcontainers
+              - image: 'registry.access.redhat.com/ubi9/python-39:1-133.1692772345'
+                name: merge-syft-sboms
+                resources: {}
+                script: >
+                  #!/bin/python3
+
+                  import json
+
+
+                  # load SBOMs
+
+                  with open("./sbom-image.json") as f:
+                    image_sbom = json.load(f)
+
+                  with open("./sbom-source.json") as f:
+                    source_sbom = json.load(f)
+
+                  # fetch unique components from available SBOMs
+
+                  def get_identifier(component):
+                    return component["name"] + '@' + component.get("version", "")
+
+                  existing_components = [get_identifier(component) for component
+                  in image_sbom["components"]]
+
+
+                  for component in source_sbom["components"]:
+                    if get_identifier(component) not in existing_components:
+                      image_sbom["components"].append(component)
+                      existing_components.append(get_identifier(component))
+
+                  image_sbom["components"].sort(key=lambda c: get_identifier(c))
+
+
+                  # write the CycloneDX unified SBOM
+
+                  with open("./sbom-cyclonedx.json", "w") as f:
+                    json.dump(image_sbom, f, indent=4)
+                securityContext:
+                  runAsUser: 0
+                workingDir: /workspace/source
+              - image: >-
+                  quay.io/redhat-appstudio/cachi2:0.3.0@sha256:46097f22b57e4d48a3fce96d931e08ccfe3a3e6421362d5f9353961279078eef
+                name: merge-cachi2-sbom
+                resources: {}
+                script: |
+                  if [ -n "${PREFETCH_INPUT}" ]; then
+                    echo "Merging contents of sbom-cachi2.json into sbom-cyclonedx.json"
+                    /src/utils/merge_syft_sbom.py sbom-cachi2.json sbom-cyclonedx.json > sbom-temp.json
+                    mv sbom-temp.json sbom-cyclonedx.json
+                  else
+                    echo "Skipping step since no Cachi2 SBOM was produced"
+                  fi
+                securityContext:
+                  runAsUser: 0
+                workingDir: /workspace/source
+              - image: 'registry.access.redhat.com/ubi9/python-39:1-133.1692772345'
+                name: create-purl-sbom
+                resources: {}
+                script: >
+                  #!/bin/python3
+
+                  import json
+
+
+                  with open("./sbom-cyclonedx.json") as f:
+                    cyclonedx_sbom = json.load(f)
+
+                  purls = [{"purl": component["purl"]} for component in
+                  cyclonedx_sbom["components"] if "purl" in component]
+
+                  purl_content = {"image_contents": {"dependencies": purls}}
+
+
+                  with open("sbom-purl.json", "w") as output_file:
+                    json.dump(purl_content, output_file, indent=4)
+                securityContext:
+                  runAsUser: 0
+                workingDir: /workspace/source
+              - image: >-
+                  registry.access.redhat.com/ubi9/buildah:9.0.0-19@sha256:c8b1d312815452964885680fc5bc8d99b3bfe9b6961228c71a09c72ca8e915eb
+                name: inject-sbom-and-push
+                resources: {}
+                script: >
+                  # Expose base image digests
+
+                  buildah images --format '{{ .Name }}:{{ .Tag }}@{{ .Digest }}'
+                  | grep -v $IMAGE > /tekton/results/BASE_IMAGES_DIGESTS
+
+
+                  base_image_name=$(buildah inspect --format '{{ index
+                  .ImageAnnotations "org.opencontainers.image.base.name"}}'
+                  $IMAGE | cut -f1 -d'@')
+
+                  base_image_digest=$(buildah inspect --format '{{ index
+                  .ImageAnnotations "org.opencontainers.image.base.digest"}}'
+                  $IMAGE)
+
+                  container=$(buildah from --pull-never $IMAGE)
+
+                  buildah copy $container sbom-cyclonedx.json sbom-purl.json
+                  /root/buildinfo/content_manifests/
+
+                  buildah config -a
+                  org.opencontainers.image.base.name=${base_image_name} -a
+                  org.opencontainers.image.base.digest=${base_image_digest}
+                  $container
+
+                  buildah commit $container $IMAGE
+
+
+                  status=-1
+
+                  max_run=5
+
+                  sleep_sec=10
+
+                  for run in $(seq 1 $max_run); do
+                    status=0
+                    [ "$run" -gt 1 ] && sleep $sleep_sec
+                    echo "Pushing sbom image to registry"
+                    buildah push \
+                      --tls-verify=$TLSVERIFY \
+                      --digestfile /workspace/source/image-digest $IMAGE \
+                      docker://$IMAGE && break || status=$?
+                  done
+
+                  if [ "$status" -ne 0 ]; then
+                      echo "Failed to push sbom image to registry after ${max_run} tries"
+                      exit 1
+                  fi
+
+
+                  cat "/workspace/source"/image-digest | tee
+                  /tekton/results/IMAGE_DIGEST
+
+                  echo -n "$IMAGE" | tee /tekton/results/IMAGE_URL
+                securityContext:
+                  capabilities:
+                    add:
+                      - SETFCAP
+                  runAsUser: 0
+                volumeMounts:
+                  - mountPath: /var/lib/containers
+                    name: varlibcontainers
+                workingDir: /workspace/source
+              - args:
+                  - attach
+                  - sbom
+                  - '--sbom'
+                  - sbom-cyclonedx.json
+                  - '--type'
+                  - cyclonedx
+                  - >-
+                    quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+                image: 'quay.io/redhat-appstudio/cosign:v2.1.1'
+                name: upload-sbom
+                resources: {}
+                workingDir: /workspace/source
+            volumes:
+              - emptyDir:
+                  medium: Memory
+                name: varlibcontainers
+            workspaces:
+              - description: Workspace containing the source code to build.
+                name: source
+          duration: 1m 1s
+          reason: Succeeded
+      - name: inspect-image
+        params:
+          - name: IMAGE_URL
+            value: $(tasks.build-container.results.IMAGE_URL)
+          - name: IMAGE_DIGEST
+            value: $(tasks.build-container.results.IMAGE_DIGEST)
+        runAfter:
+          - build-container
+        taskRef:
+          kind: Task
+          params:
+            - name: name
+              value: inspect-image
+            - name: bundle
+              value: >-
+                quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:inspect-image-0.1@sha256:bbc286f0a2ad94e671ceb9d0f1debd96f36b8c38c1147c5030957820b4125fc6
+            - name: kind
+              value: task
+          resolver: bundles
+        when:
+          - input: 'true'
+            operator: in
+            values:
+              - 'false'
+        workspaces:
+          - name: source
+            workspace: workspace
+        status:
+          reason: Skipped
+      - name: deprecated-base-image-check
+        params:
+          - name: BASE_IMAGES_DIGESTS
+            value: $(tasks.build-container.results.BASE_IMAGES_DIGESTS)
+        taskRef:
+          kind: Task
+          params:
+            - name: name
+              value: deprecated-image-check
+            - name: bundle
+              value: >-
+                quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:deprecated-image-check-0.2@sha256:58d16de95b4ca597f7f860fb85d6206e549910fa7a8d2a2cc229558f791ad329
+            - name: kind
+              value: task
+          resolver: bundles
+        when:
+          - input: 'true'
+            operator: in
+            values:
+              - 'false'
+        workspaces:
+          - name: test-ws
+            workspace: workspace
+        status:
+          reason: Skipped
+      - name: clair-scan
+        params:
+          - name: image-digest
+            value: $(tasks.build-container.results.IMAGE_DIGEST)
+          - name: image-url
+            value: $(tasks.build-container.results.IMAGE_URL)
+        runAfter:
+          - build-container
+        taskRef:
+          kind: Task
+          params:
+            - name: name
+              value: clair-scan
+            - name: bundle
+              value: >-
+                quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:clair-scan-0.1@sha256:c5602d9d6dd797da98e98fde8471ea55a788c30f74f2192807910ce5436e9b66
+            - name: kind
+              value: task
+          resolver: bundles
+        when:
+          - input: 'true'
+            operator: in
+            values:
+              - 'false'
+        status:
+          reason: Skipped
+      - name: sast-snyk-check
+        runAfter:
+          - clone-repository
+        taskRef:
+          kind: Task
+          params:
+            - name: name
+              value: sast-snyk-check
+            - name: bundle
+              value: >-
+                quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:sast-snyk-check-0.1@sha256:9dcd450b454705b9fe22c5f8f7bb7305cebc3cb73e783b85e047f7e721994189
+            - name: kind
+              value: task
+          resolver: bundles
+        when:
+          - input: 'true'
+            operator: in
+            values:
+              - 'false'
+        workspaces:
+          - name: workspace
+            workspace: workspace
+        status:
+          reason: Skipped
+      - name: clamav-scan
+        params:
+          - name: image-digest
+            value: $(tasks.build-container.results.IMAGE_DIGEST)
+          - name: image-url
+            value: $(tasks.build-container.results.IMAGE_URL)
+        runAfter:
+          - build-container
+        taskRef:
+          kind: Task
+          params:
+            - name: name
+              value: clamav-scan
+            - name: bundle
+              value: >-
+                quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:clamav-scan-0.1@sha256:cd4e301dd849cbdf7b8e38fd8f4915970b5b60174770df632a6b38ea93028d44
+            - name: kind
+              value: task
+          resolver: bundles
+        when:
+          - input: 'true'
+            operator: in
+            values:
+              - 'false'
+        status:
+          reason: Skipped
+      - name: sbom-json-check
+        params:
+          - name: IMAGE_URL
+            value: $(tasks.build-container.results.IMAGE_URL)
+          - name: IMAGE_DIGEST
+            value: $(tasks.build-container.results.IMAGE_DIGEST)
+        runAfter:
+          - build-container
+        taskRef:
+          kind: Task
+          params:
+            - name: name
+              value: sbom-json-check
+            - name: bundle
+              value: >-
+                quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:sbom-json-check-0.1@sha256:397cb2fb20f413dec9653134231bec86edb80806a3441081fbf473677fc40917
+            - name: kind
+              value: task
+          resolver: bundles
+        when:
+          - input: 'true'
+            operator: in
+            values:
+              - 'false'
+        status:
+          reason: Skipped
+    workspaces:
+      - name: workspace
+      - name: git-auth
+        optional: true
+  skippedTasks:
+    - name: prefetch-dependencies
+      reason: When Expressions evaluated to false
+      whenExpressions:
+        - input: 'false'
+          operator: in
+          values:
+            - 'true'
+    - name: inspect-image
+      reason: When Expressions evaluated to false
+      whenExpressions:
+        - input: 'true'
+          operator: in
+          values:
+            - 'false'
+    - name: deprecated-base-image-check
+      reason: When Expressions evaluated to false
+      whenExpressions:
+        - input: 'true'
+          operator: in
+          values:
+            - 'false'
+    - name: clair-scan
+      reason: When Expressions evaluated to false
+      whenExpressions:
+        - input: 'true'
+          operator: in
+          values:
+            - 'false'
+    - name: sast-snyk-check
+      reason: When Expressions evaluated to false
+      whenExpressions:
+        - input: 'true'
+          operator: in
+          values:
+            - 'false'
+    - name: clamav-scan
+      reason: When Expressions evaluated to false
+      whenExpressions:
+        - input: 'true'
+          operator: in
+          values:
+            - 'false'
+    - name: sbom-json-check
+      reason: When Expressions evaluated to false
+      whenExpressions:
+        - input: 'true'
+          operator: in
+          values:
+            - 'false'
+  startTime: '2023-08-30T19:00:02Z'
+`
+
+const tooBigNumTRInitYaml = `
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  annotations:
+    pipeline.tekton.dev/release: b8ad1b2
+    tekton.dev/tags: 'appstudio, hacbs'
+    results.tekton.dev/record: >-
+      test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45/records/cfb31f93-a5de-4cf6-8b5b-14ee29c4e351
+    results.tekton.dev/log: >-
+      test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45/logs/08f293dc-fdcc-3ad8-a3d1-b2ee7dc10f9c
+    build.appstudio.redhat.com/pipeline_name: docker-build
+    build.appstudio.openshift.io/repo: >-
+      https://github.com/nodeshift-starters/devfile-sample?rev=cb64992eebf5c18900d283a9bca08b4ab5db2874
+    chains.tekton.dev/signed: 'true'
+    tekton.dev/pipelines.minVersion: 0.12.1
+    results.tekton.dev/result: test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45
+    build.appstudio.redhat.com/target_branch: main
+    results.tekton.dev/childReadyForDeletion: 'true'
+    build.appstudio.redhat.com/bundle: >-
+      quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:docker-build-124dd76239d17a3bdb936ed26e403c9c9c4e947b
+    build.appstudio.redhat.com/commit_sha: cb64992eebf5c18900d283a9bca08b4ab5db2874
+  name: devfile-sample-nsj6m-init
+  uid: cfb31f93-a5de-4cf6-8b5b-14ee29c4e351
+  creationTimestamp: '2023-08-30T19:00:04Z'
+  generation: 1
+  managedFields:
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:build.appstudio.redhat.com/pipeline_name': {}
+            'f:build.appstudio.redhat.com/bundle': {}
+            'f:build.appstudio.redhat.com/target_branch': {}
+            'f:build.appstudio.redhat.com/commit_sha': {}
+            .: {}
+            'f:pipeline.tekton.dev/release': {}
+            'f:tekton.dev/tags': {}
+            'f:build.appstudio.openshift.io/repo': {}
+            'f:tekton.dev/pipelines.minVersion': {}
+          'f:labels':
+            'f:tekton.dev/task': {}
+            'f:tekton.dev/pipelineTask': {}
+            'f:pipelines.openshift.io/used-by': {}
+            'f:pipelines.appstudio.openshift.io/type': {}
+            'f:appstudio.openshift.io/application': {}
+            'f:tekton.dev/memberOf': {}
+            .: {}
+            'f:tekton.dev/pipelineRun': {}
+            'f:appstudio.openshift.io/component': {}
+            'f:pipelines.openshift.io/strategy': {}
+            'f:pipelines.openshift.io/runtime': {}
+            'f:app.kubernetes.io/version': {}
+            'f:tekton.dev/pipeline': {}
+          'f:ownerReferences':
+            .: {}
+            'k:{"uid":"579cdd9f-5dcc-436c-ab9b-eb770530ff45"}': {}
+        'f:spec':
+          .: {}
+          'f:params': {}
+          'f:serviceAccountName': {}
+          'f:taskRef':
+            .: {}
+            'f:kind': {}
+            'f:params': {}
+            'f:resolver': {}
+      manager: openshift-pipelines-controller
+      operation: Update
+      time: '2023-08-30T19:00:04Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:chains.tekton.dev/signed': {}
+          'f:finalizers':
+            .: {}
+            'v:"chains.tekton.dev"': {}
+      manager: openshift-pipelines-chains-controller
+      operation: Update
+      time: '2023-08-30T19:00:09Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:status':
+          .: {}
+          'f:completionTime': {}
+          'f:conditions': {}
+          'f:podName': {}
+          'f:startTime': {}
+          'f:steps': {}
+          'f:taskResults': {}
+          'f:taskSpec':
+            .: {}
+            'f:description': {}
+            'f:params': {}
+            'f:results': {}
+            'f:steps': {}
+      manager: openshift-pipelines-controller
+      operation: Update
+      subresource: status
+      time: '2023-08-30T19:00:09Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:results.tekton.dev/childReadyForDeletion': {}
+            'f:results.tekton.dev/log': {}
+            'f:results.tekton.dev/record': {}
+            'f:results.tekton.dev/result': {}
+      manager: watcher
+      operation: Update
+      time: '2023-08-30T19:00:29Z'
+  namespace: test-rhtap-95-tenant
+  ownerReferences:
+    - apiVersion: tekton.dev/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: PipelineRun
+      name: devfile-sample-nsj6m
+      uid: 579cdd9f-5dcc-436c-ab9b-eb770530ff45
+  finalizers:
+    - chains.tekton.dev
+  labels:
+    tekton.dev/memberOf: tasks
+    appstudio.openshift.io/component: devfile-sample
+    pipelines.openshift.io/runtime: generic
+    pipelines.openshift.io/strategy: docker
+    app.kubernetes.io/version: '0.1'
+    tekton.dev/pipeline: docker-build
+    pipelines.openshift.io/used-by: build-cloud
+    app.kubernetes.io/managed-by: tekton-pipelines
+    appstudio.openshift.io/application: load-app-7089021e-3585-438c-85e8-0a1ec8381a9f
+    tekton.dev/task: init
+    tekton.dev/pipelineTask: init
+    pipelines.appstudio.openshift.io/type: build
+    tekton.dev/pipelineRun: devfile-sample-nsj6m
+spec:
+  params:
+    - name: image-url
+      value: >-
+        quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+    - name: rebuild
+      value: 'false'
+    - name: skip-checks
+      value: 'true'
+    - name: skip-optional
+      value: 'true'
+    - name: pipelinerun-name
+      value: devfile-sample-nsj6m
+    - name: pipelinerun-uid
+      value: 579cdd9f-5dcc-436c-ab9b-eb770530ff45
+  serviceAccountName: appstudio-pipeline
+  taskRef:
+    kind: Task
+    params:
+      - name: name
+        value: init
+      - name: bundle
+        value: >-
+          quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:init-0.1@sha256:26586a7ef08c3e86dfdaf0a5cc38dd3d70c4c02db1331b469caaed0a0f5b3d86
+      - name: kind
+        value: task
+    resolver: bundles
+  timeout: 1h0m0s
+status:
+  completionTime: '2023-08-30T19:00:09Z'
+  conditions:
+    - lastTransitionTime: '2023-08-30T19:00:09Z'
+      message: All Steps have completed executing
+      reason: Succeeded
+      status: 'True'
+      type: Succeeded
+  podName: devfile-sample-nsj6m-init-pod
+  startTime: '2023-08-30T19:00:04Z'
+  steps:
+    - container: step-init
+      imageID: >-
+        registry.redhat.io/openshift4/ose-cli@sha256:73df37794ffff7de1101016c23dc623e4990810390ebdabcbbfa065214352c7c
+      name: init
+      terminated:
+        containerID: >-
+          cri-o://916f5f33bbb4819b281ba24ab276c20524c3ff33ad0fa86c213924255cadf59f
+        exitCode: 0
+        finishedAt: '2023-08-30T19:00:08Z'
+        message: >-
+          [{"key":"build","value":"true","type":1},{"key":"container-registry-secret","value":"unused\n","type":1}]
+        reason: Completed
+        startedAt: '2023-08-30T19:00:08Z'
+  taskResults:
+    - name: build
+      type: string
+      value: 'true'
+    - name: container-registry-secret
+      type: string
+      value: |
+        unused
+  taskSpec:
+    description: >-
+      Initialize Pipeline Task, include flags for rebuild and auth. Generates
+      image repository secret used by the PipelineRun.
+    params:
+      - description: Image URL for build by PipelineRun
+        name: image-url
+        type: string
+      - default: 'false'
+        description: Rebuild the image if exists
+        name: rebuild
+        type: string
+      - default: 'false'
+        description: Skip checks against built image
+        name: skip-checks
+        type: string
+      - default: 'true'
+        description: 'Skip optional checks, set false if you want to run optional checks'
+        name: skip-optional
+        type: string
+      - default: ''
+        description: 'unused, should be removed in next task version'
+        name: pipelinerun-name
+        type: string
+      - default: ''
+        description: 'unused, should be removed in next task version'
+        name: pipelinerun-uid
+        type: string
+    results:
+      - description: Defines if the image in param image-url should be built
+        name: build
+        type: string
+      - description: 'unused, should be removed in next task version'
+        name: container-registry-secret
+        type: string
+    steps:
+      - env:
+          - name: IMAGE_URL
+            value: >-
+              quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+          - name: REBUILD
+            value: 'false'
+          - name: SKIP_CHECKS
+            value: 'true'
+          - name: SKIP_OPTIONAL
+            value: 'true'
+        image: >-
+          registry.redhat.io/openshift4/ose-cli:4.13@sha256:73df37794ffff7de1101016c23dc623e4990810390ebdabcbbfa065214352c7c
+        name: init
+        resources: {}
+        script: >
+          #!/bin/bash
+
+          echo "Build Initialize: $IMAGE_URL"
+
+          echo
+
+
+          echo "Determine if Image Already Exists"
+
+          # Build the image when image does not exists or rebuild is set to true
+
+          if ! oc image info $IMAGE_URL &>/dev/null || [ "$REBUILD" == "true" ]
+          || [ "$SKIP_CHECKS" == "false" ]; then
+            echo -n "true" > /tekton/results/build
+          else
+            echo -n "false" > /tekton/results/build
+          fi
+
+          echo unused > /tekton/results/container-registry-secret
+`
+
+const tooBigNumTRCloneYaml = `
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  annotations:
+    pipeline.tekton.dev/release: b8ad1b2
+    tekton.dev/tags: git
+    results.tekton.dev/record: >-
+      test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45/records/8355a9eb-c535-4330-bdd4-2a21a786ede5
+    tekton.dev/categories: Git
+    results.tekton.dev/log: >-
+      test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45/logs/90081c05-9b81-30e4-91d1-b1ddee118de5
+    build.appstudio.redhat.com/pipeline_name: docker-build
+    build.appstudio.openshift.io/repo: >-
+      https://github.com/nodeshift-starters/devfile-sample?rev=cb64992eebf5c18900d283a9bca08b4ab5db2874
+    chains.tekton.dev/signed: 'true'
+    tekton.dev/platforms: 'linux/amd64,linux/s390x,linux/ppc64le,linux/arm64'
+    tekton.dev/pipelines.minVersion: 0.21.0
+    results.tekton.dev/result: test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45
+    build.appstudio.redhat.com/target_branch: main
+    results.tekton.dev/childReadyForDeletion: 'true'
+    build.appstudio.redhat.com/bundle: >-
+      quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:docker-build-124dd76239d17a3bdb936ed26e403c9c9c4e947b
+    tekton.dev/displayName: git clone
+    build.appstudio.redhat.com/commit_sha: cb64992eebf5c18900d283a9bca08b4ab5db2874
+  name: devfile-sample-nsj6m-clone-repository
+  uid: 8355a9eb-c535-4330-bdd4-2a21a786ede5
+  creationTimestamp: '2023-08-30T19:00:09Z'
+  generation: 1
+  managedFields:
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:results.tekton.dev/result': {}
+            'f:build.appstudio.redhat.com/pipeline_name': {}
+            'f:tekton.dev/platforms': {}
+            'f:build.appstudio.redhat.com/bundle': {}
+            'f:build.appstudio.redhat.com/target_branch': {}
+            'f:build.appstudio.redhat.com/commit_sha': {}
+            .: {}
+            'f:pipeline.tekton.dev/release': {}
+            'f:tekton.dev/displayName': {}
+            'f:tekton.dev/tags': {}
+            'f:tekton.dev/categories': {}
+            'f:build.appstudio.openshift.io/repo': {}
+            'f:tekton.dev/pipelines.minVersion': {}
+          'f:labels':
+            'f:tekton.dev/task': {}
+            'f:tekton.dev/pipelineTask': {}
+            'f:pipelines.openshift.io/used-by': {}
+            'f:pipelines.appstudio.openshift.io/type': {}
+            'f:appstudio.openshift.io/application': {}
+            'f:tekton.dev/memberOf': {}
+            .: {}
+            'f:tekton.dev/pipelineRun': {}
+            'f:appstudio.openshift.io/component': {}
+            'f:pipelines.openshift.io/strategy': {}
+            'f:pipelines.openshift.io/runtime': {}
+            'f:app.kubernetes.io/version': {}
+            'f:tekton.dev/pipeline': {}
+          'f:ownerReferences':
+            .: {}
+            'k:{"uid":"579cdd9f-5dcc-436c-ab9b-eb770530ff45"}': {}
+        'f:spec':
+          .: {}
+          'f:params': {}
+          'f:serviceAccountName': {}
+          'f:taskRef':
+            .: {}
+            'f:kind': {}
+            'f:params': {}
+            'f:resolver': {}
+          'f:workspaces': {}
+      manager: openshift-pipelines-controller
+      operation: Update
+      time: '2023-08-30T19:00:09Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:chains.tekton.dev/signed': {}
+          'f:finalizers':
+            .: {}
+            'v:"chains.tekton.dev"': {}
+      manager: openshift-pipelines-chains-controller
+      operation: Update
+      time: '2023-08-30T19:00:29Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:status':
+          .: {}
+          'f:completionTime': {}
+          'f:conditions': {}
+          'f:podName': {}
+          'f:startTime': {}
+          'f:steps': {}
+          'f:taskResults': {}
+          'f:taskSpec':
+            .: {}
+            'f:description': {}
+            'f:params': {}
+            'f:results': {}
+            'f:steps': {}
+            'f:workspaces': {}
+      manager: openshift-pipelines-controller
+      operation: Update
+      subresource: status
+      time: '2023-08-30T19:00:29Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:results.tekton.dev/childReadyForDeletion': {}
+            'f:results.tekton.dev/log': {}
+            'f:results.tekton.dev/record': {}
+      manager: watcher
+      operation: Update
+      time: '2023-08-30T19:00:37Z'
+  namespace: test-rhtap-95-tenant
+  ownerReferences:
+    - apiVersion: tekton.dev/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: PipelineRun
+      name: devfile-sample-nsj6m
+      uid: 579cdd9f-5dcc-436c-ab9b-eb770530ff45
+  finalizers:
+    - chains.tekton.dev
+  labels:
+    tekton.dev/memberOf: tasks
+    appstudio.openshift.io/component: devfile-sample
+    pipelines.openshift.io/runtime: generic
+    pipelines.openshift.io/strategy: docker
+    app.kubernetes.io/version: '0.1'
+    tekton.dev/pipeline: docker-build
+    pipelines.openshift.io/used-by: build-cloud
+    app.kubernetes.io/managed-by: tekton-pipelines
+    appstudio.openshift.io/application: load-app-7089021e-3585-438c-85e8-0a1ec8381a9f
+    tekton.dev/task: git-clone
+    tekton.dev/pipelineTask: clone-repository
+    pipelines.appstudio.openshift.io/type: build
+    tekton.dev/pipelineRun: devfile-sample-nsj6m
+spec:
+  params:
+    - name: url
+      value: 'https://github.com/nodeshift-starters/devfile-sample.git'
+    - name: revision
+      value: main
+  serviceAccountName: appstudio-pipeline
+  taskRef:
+    kind: Task
+    params:
+      - name: name
+        value: git-clone
+      - name: bundle
+        value: >-
+          quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:git-clone-0.1@sha256:1f84973a21aabea38434b1f663abc4cb2d86565a9c7aae1f90decb43a8fa48eb
+      - name: kind
+        value: task
+    resolver: bundles
+  timeout: 1h0m0s
+  workspaces:
+    - name: output
+      persistentVolumeClaim:
+        claimName: pvc-a54b92c8ba
+status:
+  completionTime: '2023-08-30T19:00:29Z'
+  conditions:
+    - lastTransitionTime: '2023-08-30T19:00:29Z'
+      message: All Steps have completed executing
+      reason: Succeeded
+      status: 'True'
+      type: Succeeded
+  podName: devfile-sample-nsj6m-clone-repository-pod
+  startTime: '2023-08-30T19:00:09Z'
+  steps:
+    - container: step-clone
+      imageID: >-
+        registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8@sha256:2fa0b06d52b04f377c696412e19307a9eff27383f81d87aae0b4f71672a1cd0b
+      name: clone
+      terminated:
+        containerID: >-
+          cri-o://2f18fd7be23d4e6ac18bd3066b7f4efbedb0d4527f29c321ccf50e5b3187ae8d
+        exitCode: 0
+        finishedAt: '2023-08-30T19:00:28Z'
+        message: >-
+          [{"key":"commit","value":"cb64992eebf5c18900d283a9bca08b4ab5db2874","type":1},{"key":"url","value":"https://github.com/nodeshift-starters/devfile-sample.git","type":1}]
+        reason: Completed
+        startedAt: '2023-08-30T19:00:27Z'
+    - container: step-symlink-check
+      imageID: >-
+        registry.redhat.io/ubi9@sha256:089bd3b82a78ac45c0eed231bb58bfb43bfcd0560d9bba240fc6355502c92976
+      name: symlink-check
+      terminated:
+        containerID: >-
+          cri-o://1492a8338e20bcc7897d81af16d33e47ca26a51b45e1c238ff657610b48a243a
+        exitCode: 0
+        finishedAt: '2023-08-30T19:00:28Z'
+        message: >-
+          [{"key":"commit","value":"cb64992eebf5c18900d283a9bca08b4ab5db2874","type":1},{"key":"url","value":"https://github.com/nodeshift-starters/devfile-sample.git","type":1}]
+        reason: Completed
+        startedAt: '2023-08-30T19:00:28Z'
+  taskResults:
+    - name: commit
+      type: string
+      value: cb64992eebf5c18900d283a9bca08b4ab5db2874
+    - name: url
+      type: string
+      value: 'https://github.com/nodeshift-starters/devfile-sample.git'
+  taskSpec:
+    description: >-
+      The git-clone Task will clone a repo from the provided url into the output
+      Workspace. By default the repo will be cloned into the root of your
+      Workspace.
+    params:
+      - description: Repository URL to clone from.
+        name: url
+        type: string
+      - default: ''
+        description: 'Revision to checkout. (branch, tag, sha, ref, etc...)'
+        name: revision
+        type: string
+      - default: ''
+        description: Refspec to fetch before checking out revision.
+        name: refspec
+        type: string
+      - default: 'true'
+        description: Initialize and fetch git submodules.
+        name: submodules
+        type: string
+      - default: '1'
+        description: 'Perform a shallow clone, fetching only the most recent N commits.'
+        name: depth
+        type: string
+      - default: 'true'
+        description: >-
+          Set the http.sslVerify global git config. Setting this to false is
+          not advised unless you are sure that you trust your git remote.
+        name: sslVerify
+        type: string
+      - default: ''
+        description: Subdirectory inside the output Workspace to clone the repo into.
+        name: subdirectory
+        type: string
+      - default: ''
+        description: >-
+          Define the directory patterns to match or exclude when performing a
+          sparse checkout.
+        name: sparseCheckoutDirectories
+        type: string
+      - default: 'true'
+        description: >-
+          Clean out the contents of the destination directory if it already
+          exists before cloning.
+        name: deleteExisting
+        type: string
+      - default: ''
+        description: HTTP proxy server for non-SSL requests.
+        name: httpProxy
+        type: string
+      - default: ''
+        description: HTTPS proxy server for SSL requests.
+        name: httpsProxy
+        type: string
+      - default: ''
+        description: Opt out of proxying HTTP/HTTPS requests.
+        name: noProxy
+        type: string
+      - default: 'true'
+        description: Log the commands that are executed during git-clone's operation.
+        name: verbose
+        type: string
+      - default: >-
+          registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8:v1.8.2-8@sha256:a538c423e7a11aae6ae582a411fdb090936458075f99af4ce5add038bb6983e8
+        description: The image providing the git-init binary that this Task runs.
+        name: gitInitImage
+        type: string
+      - default: /tekton/home
+        description: >
+          Absolute path to the user's home directory. Set this explicitly if you
+          are running the image as a non-root user or have overridden
+
+          the gitInitImage param with an image containing custom user
+          configuration.
+        name: userHome
+        type: string
+      - default: 'true'
+        description: >
+          Check symlinks in the repo. If they're pointing outside of the repo,
+          the build will fail.
+        name: enableSymlinkCheck
+        type: string
+    results:
+      - description: The precise commit SHA that was fetched by this Task.
+        name: commit
+        type: string
+      - description: The precise URL that was fetched by this Task.
+        name: url
+        type: string
+    steps:
+      - env:
+          - name: HOME
+            value: /tekton/home
+          - name: PARAM_URL
+            value: 'https://github.com/nodeshift-starters/devfile-sample.git'
+          - name: PARAM_REVISION
+            value: main
+          - name: PARAM_REFSPEC
+          - name: PARAM_SUBMODULES
+            value: 'true'
+          - name: PARAM_DEPTH
+            value: '1'
+          - name: PARAM_SSL_VERIFY
+            value: 'true'
+          - name: PARAM_SUBDIRECTORY
+          - name: PARAM_DELETE_EXISTING
+            value: 'true'
+          - name: PARAM_HTTP_PROXY
+          - name: PARAM_HTTPS_PROXY
+          - name: PARAM_NO_PROXY
+          - name: PARAM_VERBOSE
+            value: 'true'
+          - name: PARAM_SPARSE_CHECKOUT_DIRECTORIES
+          - name: PARAM_USER_HOME
+            value: /tekton/home
+          - name: WORKSPACE_OUTPUT_PATH
+            value: /workspace/output
+          - name: WORKSPACE_SSH_DIRECTORY_BOUND
+            value: 'false'
+          - name: WORKSPACE_SSH_DIRECTORY_PATH
+          - name: WORKSPACE_BASIC_AUTH_DIRECTORY_BOUND
+            value: 'false'
+          - name: WORKSPACE_BASIC_AUTH_DIRECTORY_PATH
+        image: >-
+          registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8:v1.8.2-8@sha256:a538c423e7a11aae6ae582a411fdb090936458075f99af4ce5add038bb6983e8
+        name: clone
+        resources: {}
+        script: >
+          #!/usr/bin/env sh
+
+          set -eu
+
+
+          if [ "${PARAM_VERBOSE}" = "true" ] ; then
+            set -x
+          fi
+
+
+          if [ "${WORKSPACE_BASIC_AUTH_DIRECTORY_BOUND}" = "true" ] ; then
+            if [ -f "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.git-credentials" ] && [ -f "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.gitconfig" ]; then
+              cp "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.git-credentials" "${PARAM_USER_HOME}/.git-credentials"
+              cp "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.gitconfig" "${PARAM_USER_HOME}/.gitconfig"
+            # Compatibility with kubernetes.io/basic-auth secrets
+            elif [ -f "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/username" ] && [ -f "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/password" ]; then
+              HOSTNAME=$(echo $PARAM_URL | awk -F/ '{print $3}')
+              echo "https://$(cat ${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/username):$(cat ${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/password)@$HOSTNAME" > "${PARAM_USER_HOME}/.git-credentials"
+              echo -e "[credential \"https://$HOSTNAME\"]\n  helper = store" > "${PARAM_USER_HOME}/.gitconfig"
+            else
+              echo "Unknown basic-auth workspace format"
+              exit 1
+            fi
+            chmod 400 "${PARAM_USER_HOME}/.git-credentials"
+            chmod 400 "${PARAM_USER_HOME}/.gitconfig"
+          fi
+
+
+          if [ "${WORKSPACE_SSH_DIRECTORY_BOUND}" = "true" ] ; then
+            cp -R "${WORKSPACE_SSH_DIRECTORY_PATH}" "${PARAM_USER_HOME}"/.ssh
+            chmod 700 "${PARAM_USER_HOME}"/.ssh
+            chmod -R 400 "${PARAM_USER_HOME}"/.ssh/*
+          fi
+
+
+          CHECKOUT_DIR="${WORKSPACE_OUTPUT_PATH}/${PARAM_SUBDIRECTORY}"
+
+
+          cleandir() {
+            # Delete any existing contents of the repo directory if it exists.
+            #
+            # We don't just "rm -rf ${CHECKOUT_DIR}" because ${CHECKOUT_DIR} might be "/"
+            # or the root of a mounted volume.
+            if [ -d "${CHECKOUT_DIR}" ] ; then
+              # Delete non-hidden files and directories
+              rm -rf "${CHECKOUT_DIR:?}"/*
+              # Delete files and directories starting with . but excluding ..
+              rm -rf "${CHECKOUT_DIR}"/.[!.]*
+              # Delete files and directories starting with .. plus any other character
+              rm -rf "${CHECKOUT_DIR}"/..?*
+            fi
+          }
+
+
+          if [ "${PARAM_DELETE_EXISTING}" = "true" ] ; then
+            cleandir
+          fi
+
+
+          test -z "${PARAM_HTTP_PROXY}" || export
+          HTTP_PROXY="${PARAM_HTTP_PROXY}"
+
+          test -z "${PARAM_HTTPS_PROXY}" || export
+          HTTPS_PROXY="${PARAM_HTTPS_PROXY}"
+
+          test -z "${PARAM_NO_PROXY}" || export NO_PROXY="${PARAM_NO_PROXY}"
+
+
+          /ko-app/git-init \
+            -url="${PARAM_URL}" \
+            -revision="${PARAM_REVISION}" \
+            -refspec="${PARAM_REFSPEC}" \
+            -path="${CHECKOUT_DIR}" \
+            -sslVerify="${PARAM_SSL_VERIFY}" \
+            -submodules="${PARAM_SUBMODULES}" \
+            -depth="${PARAM_DEPTH}" \
+            -sparseCheckoutDirectories="${PARAM_SPARSE_CHECKOUT_DIRECTORIES}"
+          cd "${CHECKOUT_DIR}"
+
+          RESULT_SHA="$(git rev-parse HEAD)"
+
+          EXIT_CODE="$?"
+
+          if [ "${EXIT_CODE}" != 0 ] ; then
+            exit "${EXIT_CODE}"
+          fi
+
+          printf "%s" "${RESULT_SHA}" > "/tekton/results/commit"
+
+          printf "%s" "${PARAM_URL}" > "/tekton/results/url"
+        securityContext:
+          runAsUser: 0
+      - env:
+          - name: PARAM_ENABLE_SYMLINK_CHECK
+            value: 'true'
+          - name: PARAM_SUBDIRECTORY
+          - name: WORKSPACE_OUTPUT_PATH
+            value: /workspace/output
+        image: 'registry.redhat.io/ubi9:9.2-696'
+        name: symlink-check
+        resources: {}
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          CHECKOUT_DIR="${WORKSPACE_OUTPUT_PATH}/${PARAM_SUBDIRECTORY}"
+          check_symlinks() {
+            FOUND_SYMLINK_POINTING_OUTSIDE_OF_REPO=false
+            while read symlink
+            do
+              target=$(readlink -f "$symlink")
+              if ! [[ "$target" =~ ^$CHECKOUT_DIR ]]; then
+                echo "The cloned repository contains symlink pointing outside of the cloned repository: $symlink"
+                FOUND_SYMLINK_POINTING_OUTSIDE_OF_REPO=true
+              fi
+            done < <(find $CHECKOUT_DIR -type l -print)
+            if [ "$FOUND_SYMLINK_POINTING_OUTSIDE_OF_REPO" = true ] ; then
+              return 1
+            fi
+          }
+
+          if [ "${PARAM_ENABLE_SYMLINK_CHECK}" = "true" ] ; then
+            echo "Running symlink check"
+            check_symlinks
+          fi
+    workspaces:
+      - description: The git repo will be cloned onto the volume backing this Workspace.
+        name: output
+      - description: >
+          A .ssh directory with private key, known_hosts, config, etc. Copied to
+
+          the user's home before git commands are executed. Used to authenticate
+
+          with the git remote when performing the clone. Binding a Secret to
+          this
+
+          Workspace is strongly recommended over other volume types.
+        name: ssh-directory
+        optional: true
+      - description: >
+          A Workspace containing a .gitconfig and .git-credentials file or
+          username and password.
+
+          These will be copied to the user's home before any git commands are
+          run. Any
+
+          other files in this Workspace are ignored. It is strongly recommended
+
+          to use ssh-directory over basic-auth whenever possible and to bind a
+
+          Secret to this Workspace over other volume types.
+        name: basic-auth
+        optional: true
+`
+
+const tooBigNumTRBuildYaml = `
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  annotations:
+    pipeline.tekton.dev/release: b8ad1b2
+    tekton.dev/tags: 'image-build, appstudio, hacbs'
+    results.tekton.dev/record: >-
+      test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45/records/216501bb-80fa-4e91-965e-db097dbc477e
+    results.tekton.dev/log: >-
+      test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45/logs/14b06370-8d0b-3cee-8fbb-279acfb72b03
+    build.appstudio.redhat.com/pipeline_name: docker-build
+    build.appstudio.openshift.io/repo: >-
+      https://github.com/nodeshift-starters/devfile-sample?rev=cb64992eebf5c18900d283a9bca08b4ab5db2874
+    chains.tekton.dev/signed: 'true'
+    tekton.dev/pipelines.minVersion: 0.12.1
+    results.tekton.dev/result: test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45
+    build.appstudio.redhat.com/target_branch: main
+    results.tekton.dev/childReadyForDeletion: 'true'
+    build.appstudio.redhat.com/bundle: >-
+      quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:docker-build-124dd76239d17a3bdb936ed26e403c9c9c4e947b
+    build.appstudio.redhat.com/commit_sha: cb64992eebf5c18900d283a9bca08b4ab5db2874
+  name: devfile-sample-nsj6m-build-container
+  uid: 216501bb-80fa-4e91-965e-db097dbc477e
+  creationTimestamp: '2023-08-30T19:00:29Z'
+  generation: 1
+  managedFields:
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:results.tekton.dev/result': {}
+            'f:build.appstudio.redhat.com/pipeline_name': {}
+            'f:build.appstudio.redhat.com/bundle': {}
+            'f:build.appstudio.redhat.com/target_branch': {}
+            'f:build.appstudio.redhat.com/commit_sha': {}
+            .: {}
+            'f:pipeline.tekton.dev/release': {}
+            'f:tekton.dev/tags': {}
+            'f:build.appstudio.openshift.io/repo': {}
+            'f:tekton.dev/pipelines.minVersion': {}
+          'f:labels':
+            'f:tekton.dev/task': {}
+            'f:tekton.dev/pipelineTask': {}
+            'f:pipelines.openshift.io/used-by': {}
+            'f:pipelines.appstudio.openshift.io/type': {}
+            'f:appstudio.openshift.io/application': {}
+            'f:tekton.dev/memberOf': {}
+            .: {}
+            'f:tekton.dev/pipelineRun': {}
+            'f:build.appstudio.redhat.com/build_type': {}
+            'f:appstudio.openshift.io/component': {}
+            'f:pipelines.openshift.io/strategy': {}
+            'f:pipelines.openshift.io/runtime': {}
+            'f:app.kubernetes.io/version': {}
+            'f:tekton.dev/pipeline': {}
+          'f:ownerReferences':
+            .: {}
+            'k:{"uid":"579cdd9f-5dcc-436c-ab9b-eb770530ff45"}': {}
+        'f:spec':
+          .: {}
+          'f:params': {}
+          'f:serviceAccountName': {}
+          'f:taskRef':
+            .: {}
+            'f:kind': {}
+            'f:params': {}
+            'f:resolver': {}
+          'f:workspaces': {}
+      manager: openshift-pipelines-controller
+      operation: Update
+      time: '2023-08-30T19:00:29Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:status':
+          .: {}
+          'f:completionTime': {}
+          'f:conditions': {}
+          'f:podName': {}
+          'f:startTime': {}
+          'f:steps': {}
+          'f:taskResults': {}
+          'f:taskSpec':
+            .: {}
+            'f:description': {}
+            'f:params': {}
+            'f:results': {}
+            'f:stepTemplate':
+              .: {}
+              'f:env': {}
+              'f:name': {}
+              'f:resources': {}
+            'f:steps': {}
+            'f:volumes': {}
+            'f:workspaces': {}
+      manager: openshift-pipelines-controller
+      operation: Update
+      subresource: status
+      time: '2023-08-30T19:01:30Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:chains.tekton.dev/signed': {}
+          'f:finalizers':
+            .: {}
+            'v:"chains.tekton.dev"': {}
+      manager: openshift-pipelines-chains-controller
+      operation: Update
+      time: '2023-08-30T19:01:31Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:results.tekton.dev/childReadyForDeletion': {}
+            'f:results.tekton.dev/log': {}
+            'f:results.tekton.dev/record': {}
+      manager: watcher
+      operation: Update
+      time: '2023-08-30T19:02:07Z'
+  namespace: test-rhtap-95-tenant
+  ownerReferences:
+    - apiVersion: tekton.dev/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: PipelineRun
+      name: devfile-sample-nsj6m
+      uid: 579cdd9f-5dcc-436c-ab9b-eb770530ff45
+  finalizers:
+    - chains.tekton.dev
+  labels:
+    tekton.dev/memberOf: tasks
+    appstudio.openshift.io/component: devfile-sample
+    pipelines.openshift.io/runtime: generic
+    build.appstudio.redhat.com/build_type: docker
+    pipelines.openshift.io/strategy: docker
+    app.kubernetes.io/version: '0.1'
+    tekton.dev/pipeline: docker-build
+    pipelines.openshift.io/used-by: build-cloud
+    app.kubernetes.io/managed-by: tekton-pipelines
+    appstudio.openshift.io/application: load-app-7089021e-3585-438c-85e8-0a1ec8381a9f
+    tekton.dev/task: buildah
+    tekton.dev/pipelineTask: build-container
+    pipelines.appstudio.openshift.io/type: build
+    tekton.dev/pipelineRun: devfile-sample-nsj6m
+spec:
+  params:
+    - name: IMAGE
+      value: >-
+        quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+    - name: DOCKERFILE
+      value: Dockerfile
+    - name: CONTEXT
+      value: .
+    - name: HERMETIC
+      value: 'false'
+    - name: PREFETCH_INPUT
+      value: ''
+    - name: IMAGE_EXPIRES_AFTER
+      value: ''
+    - name: COMMIT_SHA
+      value: cb64992eebf5c18900d283a9bca08b4ab5db2874
+  serviceAccountName: appstudio-pipeline
+  taskRef:
+    kind: Task
+    params:
+      - name: name
+        value: buildah
+      - name: bundle
+        value: >-
+          quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:buildah-0.1@sha256:bfb5edabab8128e24608df608448b9392fd0a2b61ac05a53e83aa60d8929b73f
+      - name: kind
+        value: task
+    resolver: bundles
+  timeout: 1h0m0s
+  workspaces:
+    - name: source
+      persistentVolumeClaim:
+        claimName: pvc-a54b92c8ba
+status:
+  completionTime: '2023-08-30T19:01:30Z'
+  conditions:
+    - lastTransitionTime: '2023-08-30T19:01:30Z'
+      message: All Steps have completed executing
+      reason: Succeeded
+      status: 'True'
+      type: Succeeded
+  podName: devfile-sample-nsj6m-build-container-pod
+  startTime: '2023-08-30T19:00:29Z'
+  steps:
+    - container: step-build
+      imageID: >-
+        quay.io/redhat-appstudio/buildah@sha256:381e9bfedd59701477621da93892106873a6951b196105d3d2d85c3f6d7b569b
+      name: build
+      terminated:
+        containerID: >-
+          cri-o://24d9f9c59f1c0fe114d05b1c29ac7209c3d3482716cc740f4783c8903c4721fb
+        exitCode: 0
+        finishedAt: '2023-08-30T19:01:16Z'
+        reason: Completed
+        startedAt: '2023-08-30T19:00:50Z'
+    - container: step-sbom-syft-generate
+      imageID: >-
+        quay.io/redhat-appstudio/syft@sha256:244a17ce220a0b7a54c862c4fe3b72ce92799910c5eff8e94ac2f121fa5b4a53
+      name: sbom-syft-generate
+      terminated:
+        containerID: >-
+          cri-o://cb51f07d379e15f8a8755bfb84428ff60de6989f0a0c2a1de3fa07927b09ec2c
+        exitCode: 0
+        finishedAt: '2023-08-30T19:01:18Z'
+        reason: Completed
+        startedAt: '2023-08-30T19:01:16Z'
+    - container: step-analyse-dependencies-java-sbom
+      imageID: >-
+        quay.io/redhat-appstudio/hacbs-jvm-build-request-processor@sha256:b198cf4b33dab59ce8ac25afd4e1001390db29ca2dec83dc8a1e21b0359ce743
+      name: analyse-dependencies-java-sbom
+      terminated:
+        containerID: >-
+          cri-o://b7448e62a57890749446e24a4f7f51ea2fa6333d9616c1193f4f92d9728e8fe6
+        exitCode: 0
+        finishedAt: '2023-08-30T19:01:18Z'
+        message: '[{"key":"JAVA_COMMUNITY_DEPENDENCIES","value":"","type":1}]'
+        reason: Completed
+        startedAt: '2023-08-30T19:01:18Z'
+    - container: step-merge-syft-sboms
+      imageID: >-
+        registry.access.redhat.com/ubi9/python-39@sha256:562b4f9cd4e5abeba54c56fd2290096a71f6e10aa8c1c18f43c9d6962c2d4d41
+      name: merge-syft-sboms
+      terminated:
+        containerID: >-
+          cri-o://7082cb7ddc3c629dca86aac4b5ae553eeb09960402ff503b49753b4f8c1ef7a1
+        exitCode: 0
+        finishedAt: '2023-08-30T19:01:19Z'
+        message: '[{"key":"JAVA_COMMUNITY_DEPENDENCIES","value":"","type":1}]'
+        reason: Completed
+        startedAt: '2023-08-30T19:01:18Z'
+    - container: step-merge-cachi2-sbom
+      imageID: >-
+        quay.io/redhat-appstudio/cachi2@sha256:46097f22b57e4d48a3fce96d931e08ccfe3a3e6421362d5f9353961279078eef
+      name: merge-cachi2-sbom
+      terminated:
+        containerID: >-
+          cri-o://543053c4be3079d0d266d494b520852f15d3329a5b2e5ab36f12ffb138eac2e5
+        exitCode: 0
+        finishedAt: '2023-08-30T19:01:19Z'
+        message: '[{"key":"JAVA_COMMUNITY_DEPENDENCIES","value":"","type":1}]'
+        reason: Completed
+        startedAt: '2023-08-30T19:01:19Z'
+    - container: step-create-purl-sbom
+      imageID: >-
+        registry.access.redhat.com/ubi9/python-39@sha256:562b4f9cd4e5abeba54c56fd2290096a71f6e10aa8c1c18f43c9d6962c2d4d41
+      name: create-purl-sbom
+      terminated:
+        containerID: >-
+          cri-o://7e41fead679f12a2291dc1c1d59c4fff229cfd7f17cebea7381aa9dd2c6472a5
+        exitCode: 0
+        finishedAt: '2023-08-30T19:01:19Z'
+        message: '[{"key":"JAVA_COMMUNITY_DEPENDENCIES","value":"","type":1}]'
+        reason: Completed
+        startedAt: '2023-08-30T19:01:19Z'
+    - container: step-inject-sbom-and-push
+      imageID: >-
+        registry.access.redhat.com/ubi9/buildah@sha256:c8b1d312815452964885680fc5bc8d99b3bfe9b6961228c71a09c72ca8e915eb
+      name: inject-sbom-and-push
+      terminated:
+        containerID: >-
+          cri-o://f17b5f541734bb1c60ba25aa733925f009345ba2b47d77ff25b5c8d28f08802b
+        exitCode: 0
+        finishedAt: '2023-08-30T19:01:27Z'
+        message: >-
+          [{"key":"BASE_IMAGES_DIGESTS","value":"registry.access.redhat.com/ubi8/nodejs-18:latest@sha256:8a634a49c4e8d1753cddd3c047a4324d405fd2f6723f67b7ac274bb5fe72ff44\nregistry.access.redhat.com/ubi8/nodejs-18-minimal:latest@sha256:a1372e99afe18a64b9dbb70612452efe02e934db136fba00ba1da417ede408a0\n","type":1},{"key":"IMAGE_DIGEST","value":"sha256:9cc2777884b232b63f67c352ba96866edac8cf35fc14a87107bfcf64faaff7db","type":1},{"key":"IMAGE_URL","value":"quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002","type":1},{"key":"JAVA_COMMUNITY_DEPENDENCIES","value":"","type":1}]
+        reason: Completed
+        startedAt: '2023-08-30T19:01:19Z'
+    - container: step-upload-sbom
+      imageID: >-
+        quay.io/redhat-appstudio/cosign@sha256:c883d6f8d39148f2cea71bff4622d196d89df3e510f36c140c097b932f0dd5d5
+      name: upload-sbom
+      terminated:
+        containerID: >-
+          cri-o://bb40ca2fda83463cac9034e8c9f46279270d77df5f591f86cbac30eae8e9408f
+        exitCode: 0
+        finishedAt: '2023-08-30T19:01:29Z'
+        message: >-
+          [{"key":"BASE_IMAGES_DIGESTS","value":"registry.access.redhat.com/ubi8/nodejs-18:latest@sha256:8a634a49c4e8d1753cddd3c047a4324d405fd2f6723f67b7ac274bb5fe72ff44\nregistry.access.redhat.com/ubi8/nodejs-18-minimal:latest@sha256:a1372e99afe18a64b9dbb70612452efe02e934db136fba00ba1da417ede408a0\n","type":1},{"key":"IMAGE_DIGEST","value":"sha256:9cc2777884b232b63f67c352ba96866edac8cf35fc14a87107bfcf64faaff7db","type":1},{"key":"IMAGE_URL","value":"quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002","type":1},{"key":"JAVA_COMMUNITY_DEPENDENCIES","value":"","type":1}]
+        reason: Completed
+        startedAt: '2023-08-30T19:01:28Z'
+  taskResults:
+    - name: JAVA_COMMUNITY_DEPENDENCIES
+      type: string
+      value: ''
+    - name: BASE_IMAGES_DIGESTS
+      type: string
+      value: >
+        registry.access.redhat.com/ubi8/nodejs-18:latest@sha256:8a634a49c4e8d1753cddd3c047a4324d405fd2f6723f67b7ac274bb5fe72ff44
+
+        registry.access.redhat.com/ubi8/nodejs-18-minimal:latest@sha256:a1372e99afe18a64b9dbb70612452efe02e934db136fba00ba1da417ede408a0
+    - name: IMAGE_DIGEST
+      type: string
+      value: 'sha256:9cc2777884b232b63f67c352ba96866edac8cf35fc14a87107bfcf64faaff7db'
+    - name: IMAGE_URL
+      type: string
+      value: >-
+        quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+  taskSpec:
+    description: >-
+      Buildah task builds source code into a container image and pushes the
+      image into container registry using buildah tool.
+
+      In addition it generates a SBOM file, injects the SBOM file into final
+      container image and pushes the SBOM file as separate image using cosign
+      tool.
+
+      When [Java dependency
+      rebuild](https://redhat-appstudio.github.io/docs.stonesoup.io/Documentation/main/cli/proc_enabled_java_dependencies.html)
+      is enabled it triggers rebuilds of Java artifacts.
+
+      When prefetch-dependencies task was activated it is using its artifacts to
+      run build in hermetic environment.
+    params:
+      - description: Reference of the image buildah will produce.
+        name: IMAGE
+        type: string
+      - default: >-
+          registry.access.redhat.com/ubi9/buildah:9.0.0-19@sha256:c8b1d312815452964885680fc5bc8d99b3bfe9b6961228c71a09c72ca8e915eb
+        description: The location of the buildah builder image.
+        name: BUILDER_IMAGE
+        type: string
+      - default: ./Dockerfile
+        description: Path to the Dockerfile to build.
+        name: DOCKERFILE
+        type: string
+      - default: .
+        description: Path to the directory to use as context.
+        name: CONTEXT
+        type: string
+      - default: 'true'
+        description: >-
+          Verify the TLS on the registry endpoint (for push/pull to a non-TLS
+          registry)
+        name: TLSVERIFY
+        type: string
+      - default: ''
+        description: 'unused, should be removed in next task version'
+        name: DOCKER_AUTH
+        type: string
+      - default: 'false'
+        description: Determines if build will be executed without network access.
+        name: HERMETIC
+        type: string
+      - default: ''
+        description: >-
+          In case it is not empty, the prefetched content should be made
+          available to the build.
+        name: PREFETCH_INPUT
+        type: string
+      - default: ''
+        description: >-
+          Delete image tag after specified time. Empty means to keep the image
+          tag. Time values could be something like 1h, 2d, 3w for hours, days,
+          and weeks, respectively.
+        name: IMAGE_EXPIRES_AFTER
+        type: string
+      - default: ''
+        description: The image is built from this commit.
+        name: COMMIT_SHA
+        type: string
+    results:
+      - description: Digest of the image just built
+        name: IMAGE_DIGEST
+        type: string
+      - description: Image repository where the built image was pushed
+        name: IMAGE_URL
+        type: string
+      - description: Digests of the base images used for build
+        name: BASE_IMAGES_DIGESTS
+        type: string
+      - description: The counting of Java components by publisher in JSON format
+        name: SBOM_JAVA_COMPONENTS_COUNT
+        type: string
+      - description: >-
+          The Java dependencies that came from community sources such as Maven
+          central.
+        name: JAVA_COMMUNITY_DEPENDENCIES
+        type: string
+    stepTemplate:
+      env:
+        - name: BUILDAH_FORMAT
+          value: oci
+        - name: STORAGE_DRIVER
+          value: vfs
+        - name: HERMETIC
+          value: 'false'
+        - name: PREFETCH_INPUT
+        - name: CONTEXT
+          value: .
+        - name: DOCKERFILE
+          value: Dockerfile
+        - name: IMAGE
+          value: >-
+            quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+        - name: TLSVERIFY
+          value: 'true'
+        - name: IMAGE_EXPIRES_AFTER
+      name: ''
+      resources: {}
+    steps:
+      - env:
+          - name: COMMIT_SHA
+            value: cb64992eebf5c18900d283a9bca08b4ab5db2874
+        image: 'quay.io/redhat-appstudio/buildah:v1.28'
+        name: build
+        resources:
+          limits:
+            cpu: '2'
+            memory: 4Gi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        script: >
+          if [ -e "$CONTEXT/$DOCKERFILE" ]; then
+            dockerfile_path="$CONTEXT/$DOCKERFILE"
+          elif [ -e "$DOCKERFILE" ]; then
+            dockerfile_path="$DOCKERFILE"
+          elif echo "$DOCKERFILE" | grep -q "^https\?://"; then
+            echo "Fetch Dockerfile from $DOCKERFILE"
+            dockerfile_path=$(mktemp --suffix=-Dockerfile)
+            http_code=$(curl -s -L -w "%{http_code}" --output "$dockerfile_path" "$DOCKERFILE")
+            if [ $http_code != 200 ]; then
+              echo "No Dockerfile is fetched. Server responds $http_code"
+              exit 1
+            fi
+            http_code=$(curl -s -L -w "%{http_code}" --output "$dockerfile_path.dockerignore.tmp" "$DOCKERFILE.dockerignore")
+            if [ $http_code = 200 ]; then
+              echo "Fetched .dockerignore from $DOCKERFILE.dockerignore"
+              mv "$dockerfile_path.dockerignore.tmp" $CONTEXT/.dockerignore
+            fi
+          else
+            echo "Cannot find Dockerfile $DOCKERFILE"
+            exit 1
+          fi
+
+          if [ -n "$JVM_BUILD_WORKSPACE_ARTIFACT_CACHE_PORT_80_TCP_ADDR" ] &&
+          grep -q '^\s*RUN \(./\)\?mvn' "$dockerfile_path"; then
+            sed -i -e "s|^\s*RUN \(\(./\)\?mvn\(.*\)\)|RUN echo \"<settings><mirrors><mirror><id>mirror.default</id><url>http://$JVM_BUILD_WORKSPACE_ARTIFACT_CACHE_PORT_80_TCP_ADDR/v1/cache/default/0/</url><mirrorOf>*</mirrorOf></mirror></mirrors></settings>\" > /tmp/settings.yaml; \1 -s /tmp/settings.yaml|g" "$dockerfile_path"
+            touch /var/lib/containers/java
+          fi
+
+
+          # Fixing group permission on /var/lib/containers
+
+          chown root:root /var/lib/containers
+
+
+          sed -i 's/^\s*short-name-mode\s*=\s*.*/short-name-mode = "disabled"/'
+          /etc/containers/registries.conf
+
+
+          # Setting new namespace to run buildah - 2^32-2
+
+          echo 'root:1:4294967294' | tee -a /etc/subuid >> /etc/subgid
+
+
+          if [ "${HERMETIC}" == "true" ]; then
+            BUILDAH_ARGS="--pull=never"
+            UNSHARE_ARGS="--net"
+            for image in $(grep -i '^\s*FROM' "$dockerfile_path" | sed 's/--platform=\S*//' | awk '{print $2}'); do
+              unshare -Ufp --keep-caps -r --map-users 1,1,65536 --map-groups 1,1,65536 -- buildah pull $image
+            done
+            echo "Build will be executed with network isolation"
+          fi
+
+
+          if [ -n "${PREFETCH_INPUT}" ]; then
+            mv cachi2 /tmp/
+            chmod -R go+rwX /tmp/cachi2
+            VOLUME_MOUNTS="--volume /tmp/cachi2:/cachi2"
+            sed -i 's|^\s*run |RUN . /cachi2/cachi2.env \&\& \\\n    |i' "$dockerfile_path"
+            echo "Prefetched content will be made available"
+          fi
+
+
+          LABELS=(
+            "--label" "build-date=$(date -u +'%Y-%m-%dT%H:%M:%S')"
+            "--label" "architecture=$(uname -m)"
+            "--label" "vcs-type=git"
+          )
+
+          [ -n "$COMMIT_SHA" ] && LABELS+=("--label" "vcs-ref=$COMMIT_SHA")
+
+          [ -n "$IMAGE_EXPIRES_AFTER" ] && LABELS+=("--label"
+          "quay.expires-after=$IMAGE_EXPIRES_AFTER")
+
+
+          unshare -Uf $UNSHARE_ARGS --keep-caps -r --map-users 1,1,65536
+          --map-groups 1,1,65536 -- buildah build \
+            $VOLUME_MOUNTS \
+            $BUILDAH_ARGS \
+            ${LABELS[@]} \
+            --tls-verify=$TLSVERIFY --no-cache \
+            --ulimit nofile=4096:4096 \
+            -f "$dockerfile_path" -t $IMAGE $CONTEXT
+
+          container=$(buildah from --pull-never $IMAGE)
+
+          buildah mount $container | tee /workspace/container_path
+
+          echo $container > /workspace/container_name
+
+
+          # Save the SBOM produced by Cachi2 so it can be merged into the final
+          SBOM later
+
+          if [ -n "${PREFETCH_INPUT}" ]; then
+            cp /tmp/cachi2/output/bom.json ./sbom-cachi2.json
+          fi
+        securityContext:
+          capabilities:
+            add:
+              - SETFCAP
+        volumeMounts:
+          - mountPath: /var/lib/containers
+            name: varlibcontainers
+        workingDir: /workspace/source
+      - image: 'quay.io/redhat-appstudio/syft:v0.85.0'
+        name: sbom-syft-generate
+        resources: {}
+        script: >
+          syft dir:/workspace/source --file=/workspace/source/sbom-source.json
+          --output=cyclonedx-json
+
+          find $(cat /workspace/container_path) -xtype l -delete
+
+          syft dir:$(cat /workspace/container_path)
+          --file=/workspace/source/sbom-image.json --output=cyclonedx-json
+        volumeMounts:
+          - mountPath: /var/lib/containers
+            name: varlibcontainers
+      - image: >-
+          quay.io/redhat-appstudio/hacbs-jvm-build-request-processor:1d417e6f1f3e68c6c537333b5759796eddae0afc
+        name: analyse-dependencies-java-sbom
+        resources: {}
+        script: |
+          if [ -f /var/lib/containers/java ]; then
+            /opt/jboss/container/java/run/run-java.sh analyse-dependencies path $(cat /workspace/container_path) -s /workspace/source/sbom-image.json --task-run-name devfile-sample-nsj6m-build-container --publishers /tekton/results/SBOM_JAVA_COMPONENTS_COUNT
+            sed -i 's/^/ /' /tekton/results/SBOM_JAVA_COMPONENTS_COUNT # Workaround for SRVKP-2875
+          else
+            touch /tekton/results/JAVA_COMMUNITY_DEPENDENCIES
+          fi
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+          - mountPath: /var/lib/containers
+            name: varlibcontainers
+      - image: 'registry.access.redhat.com/ubi9/python-39:1-133.1692772345'
+        name: merge-syft-sboms
+        resources: {}
+        script: >
+          #!/bin/python3
+
+          import json
+
+
+          # load SBOMs
+
+          with open("./sbom-image.json") as f:
+            image_sbom = json.load(f)
+
+          with open("./sbom-source.json") as f:
+            source_sbom = json.load(f)
+
+          # fetch unique components from available SBOMs
+
+          def get_identifier(component):
+            return component["name"] + '@' + component.get("version", "")
+
+          existing_components = [get_identifier(component) for component in
+          image_sbom["components"]]
+
+
+          for component in source_sbom["components"]:
+            if get_identifier(component) not in existing_components:
+              image_sbom["components"].append(component)
+              existing_components.append(get_identifier(component))
+
+          image_sbom["components"].sort(key=lambda c: get_identifier(c))
+
+
+          # write the CycloneDX unified SBOM
+
+          with open("./sbom-cyclonedx.json", "w") as f:
+            json.dump(image_sbom, f, indent=4)
+        securityContext:
+          runAsUser: 0
+        workingDir: /workspace/source
+      - image: >-
+          quay.io/redhat-appstudio/cachi2:0.3.0@sha256:46097f22b57e4d48a3fce96d931e08ccfe3a3e6421362d5f9353961279078eef
+        name: merge-cachi2-sbom
+        resources: {}
+        script: |
+          if [ -n "${PREFETCH_INPUT}" ]; then
+            echo "Merging contents of sbom-cachi2.json into sbom-cyclonedx.json"
+            /src/utils/merge_syft_sbom.py sbom-cachi2.json sbom-cyclonedx.json > sbom-temp.json
+            mv sbom-temp.json sbom-cyclonedx.json
+          else
+            echo "Skipping step since no Cachi2 SBOM was produced"
+          fi
+        securityContext:
+          runAsUser: 0
+        workingDir: /workspace/source
+      - image: 'registry.access.redhat.com/ubi9/python-39:1-133.1692772345'
+        name: create-purl-sbom
+        resources: {}
+        script: >
+          #!/bin/python3
+
+          import json
+
+
+          with open("./sbom-cyclonedx.json") as f:
+            cyclonedx_sbom = json.load(f)
+
+          purls = [{"purl": component["purl"]} for component in
+          cyclonedx_sbom["components"] if "purl" in component]
+
+          purl_content = {"image_contents": {"dependencies": purls}}
+
+
+          with open("sbom-purl.json", "w") as output_file:
+            json.dump(purl_content, output_file, indent=4)
+        securityContext:
+          runAsUser: 0
+        workingDir: /workspace/source
+      - image: >-
+          registry.access.redhat.com/ubi9/buildah:9.0.0-19@sha256:c8b1d312815452964885680fc5bc8d99b3bfe9b6961228c71a09c72ca8e915eb
+        name: inject-sbom-and-push
+        resources: {}
+        script: >
+          # Expose base image digests
+
+          buildah images --format '{{ .Name }}:{{ .Tag }}@{{ .Digest }}' | grep
+          -v $IMAGE > /tekton/results/BASE_IMAGES_DIGESTS
+
+
+          base_image_name=$(buildah inspect --format '{{ index .ImageAnnotations
+          "org.opencontainers.image.base.name"}}' $IMAGE | cut -f1 -d'@')
+
+          base_image_digest=$(buildah inspect --format '{{ index
+          .ImageAnnotations "org.opencontainers.image.base.digest"}}' $IMAGE)
+
+          container=$(buildah from --pull-never $IMAGE)
+
+          buildah copy $container sbom-cyclonedx.json sbom-purl.json
+          /root/buildinfo/content_manifests/
+
+          buildah config -a
+          org.opencontainers.image.base.name=${base_image_name} -a
+          org.opencontainers.image.base.digest=${base_image_digest} $container
+
+          buildah commit $container $IMAGE
+
+
+          status=-1
+
+          max_run=5
+
+          sleep_sec=10
+
+          for run in $(seq 1 $max_run); do
+            status=0
+            [ "$run" -gt 1 ] && sleep $sleep_sec
+            echo "Pushing sbom image to registry"
+            buildah push \
+              --tls-verify=$TLSVERIFY \
+              --digestfile /workspace/source/image-digest $IMAGE \
+              docker://$IMAGE && break || status=$?
+          done
+
+          if [ "$status" -ne 0 ]; then
+              echo "Failed to push sbom image to registry after ${max_run} tries"
+              exit 1
+          fi
+
+
+          cat "/workspace/source"/image-digest | tee
+          /tekton/results/IMAGE_DIGEST
+
+          echo -n "$IMAGE" | tee /tekton/results/IMAGE_URL
+        securityContext:
+          capabilities:
+            add:
+              - SETFCAP
+          runAsUser: 0
+        volumeMounts:
+          - mountPath: /var/lib/containers
+            name: varlibcontainers
+        workingDir: /workspace/source
+      - args:
+          - attach
+          - sbom
+          - '--sbom'
+          - sbom-cyclonedx.json
+          - '--type'
+          - cyclonedx
+          - >-
+            quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+        image: 'quay.io/redhat-appstudio/cosign:v2.1.1'
+        name: upload-sbom
+        resources: {}
+        workingDir: /workspace/source
+    volumes:
+      - emptyDir:
+          medium: Memory
+        name: varlibcontainers
+    workspaces:
+      - description: Workspace containing the source code to build.
+        name: source
+`
+
+const tooBigNumTRSbomYaml = `
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  annotations:
+    pipeline.tekton.dev/release: b8ad1b2
+    tekton.dev/tags: 'appstudio, hacbs'
+    results.tekton.dev/record: >-
+      test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45/records/82872a3b-5596-45f2-84ac-d499953ad295
+    results.tekton.dev/log: >-
+      test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45/logs/7ef4eb0b-de57-3ed5-8c16-acfe5a2bfdd1
+    build.appstudio.redhat.com/pipeline_name: docker-build
+    build.appstudio.openshift.io/repo: >-
+      https://github.com/nodeshift-starters/devfile-sample?rev=cb64992eebf5c18900d283a9bca08b4ab5db2874
+    chains.tekton.dev/signed: 'true'
+    tekton.dev/pipelines.minVersion: 0.12.1
+    results.tekton.dev/result: test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45
+    build.appstudio.redhat.com/target_branch: main
+    results.tekton.dev/childReadyForDeletion: 'true'
+    build.appstudio.redhat.com/bundle: >-
+      quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:docker-build-124dd76239d17a3bdb936ed26e403c9c9c4e947b
+    build.appstudio.redhat.com/commit_sha: cb64992eebf5c18900d283a9bca08b4ab5db2874
+  name: devfile-sample-nsj6m-show-sbom
+  uid: 82872a3b-5596-45f2-84ac-d499953ad295
+  creationTimestamp: '2023-08-30T19:01:30Z'
+  generation: 1
+  managedFields:
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:results.tekton.dev/result': {}
+            'f:build.appstudio.redhat.com/pipeline_name': {}
+            'f:build.appstudio.redhat.com/bundle': {}
+            'f:build.appstudio.redhat.com/target_branch': {}
+            'f:build.appstudio.redhat.com/commit_sha': {}
+            .: {}
+            'f:pipeline.tekton.dev/release': {}
+            'f:tekton.dev/tags': {}
+            'f:build.appstudio.openshift.io/repo': {}
+            'f:tekton.dev/pipelines.minVersion': {}
+          'f:labels':
+            'f:tekton.dev/task': {}
+            'f:tekton.dev/pipelineTask': {}
+            'f:pipelines.openshift.io/used-by': {}
+            'f:pipelines.appstudio.openshift.io/type': {}
+            'f:appstudio.openshift.io/application': {}
+            'f:tekton.dev/memberOf': {}
+            .: {}
+            'f:tekton.dev/pipelineRun': {}
+            'f:appstudio.openshift.io/component': {}
+            'f:pipelines.openshift.io/strategy': {}
+            'f:pipelines.openshift.io/runtime': {}
+            'f:app.kubernetes.io/version': {}
+            'f:tekton.dev/pipeline': {}
+          'f:ownerReferences':
+            .: {}
+            'k:{"uid":"579cdd9f-5dcc-436c-ab9b-eb770530ff45"}': {}
+        'f:spec':
+          .: {}
+          'f:params': {}
+          'f:serviceAccountName': {}
+          'f:taskRef':
+            .: {}
+            'f:kind': {}
+            'f:params': {}
+            'f:resolver': {}
+      manager: openshift-pipelines-controller
+      operation: Update
+      time: '2023-08-30T19:01:30Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:chains.tekton.dev/signed': {}
+          'f:finalizers':
+            .: {}
+            'v:"chains.tekton.dev"': {}
+      manager: openshift-pipelines-chains-controller
+      operation: Update
+      time: '2023-08-30T19:01:36Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:status':
+          .: {}
+          'f:completionTime': {}
+          'f:conditions': {}
+          'f:podName': {}
+          'f:startTime': {}
+          'f:steps': {}
+          'f:taskSpec':
+            .: {}
+            'f:description': {}
+            'f:params': {}
+            'f:steps': {}
+      manager: openshift-pipelines-controller
+      operation: Update
+      subresource: status
+      time: '2023-08-30T19:01:36Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:results.tekton.dev/childReadyForDeletion': {}
+            'f:results.tekton.dev/log': {}
+            'f:results.tekton.dev/record': {}
+      manager: watcher
+      operation: Update
+      time: '2023-08-30T19:02:13Z'
+  namespace: test-rhtap-95-tenant
+  ownerReferences:
+    - apiVersion: tekton.dev/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: PipelineRun
+      name: devfile-sample-nsj6m
+      uid: 579cdd9f-5dcc-436c-ab9b-eb770530ff45
+  finalizers:
+    - chains.tekton.dev
+  labels:
+    tekton.dev/memberOf: finally
+    appstudio.openshift.io/component: devfile-sample
+    pipelines.openshift.io/runtime: generic
+    pipelines.openshift.io/strategy: docker
+    app.kubernetes.io/version: '0.1'
+    tekton.dev/pipeline: docker-build
+    pipelines.openshift.io/used-by: build-cloud
+    app.kubernetes.io/managed-by: tekton-pipelines
+    appstudio.openshift.io/application: load-app-7089021e-3585-438c-85e8-0a1ec8381a9f
+    tekton.dev/task: show-sbom
+    tekton.dev/pipelineTask: show-sbom
+    pipelines.appstudio.openshift.io/type: build
+    tekton.dev/pipelineRun: devfile-sample-nsj6m
+spec:
+  params:
+    - name: IMAGE_URL
+      value: >-
+        quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+  serviceAccountName: appstudio-pipeline
+  taskRef:
+    kind: Task
+    params:
+      - name: name
+        value: show-sbom
+      - name: bundle
+        value: >-
+          quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:show-sbom-0.1@sha256:7db0af43dcebaeb33e34413148370e17078c30fd2fc78fb84c8941b444199f36
+      - name: kind
+        value: task
+    resolver: bundles
+  timeout: 1h0m0s
+status:
+  completionTime: '2023-08-30T19:01:36Z'
+  conditions:
+    - lastTransitionTime: '2023-08-30T19:01:36Z'
+      message: All Steps have completed executing
+      reason: Succeeded
+      status: 'True'
+      type: Succeeded
+  podName: devfile-sample-nsj6m-show-sbom-pod
+  startTime: '2023-08-30T19:01:30Z'
+  steps:
+    - container: step-show-sbom
+      imageID: >-
+        quay.io/redhat-appstudio/cosign@sha256:c883d6f8d39148f2cea71bff4622d196d89df3e510f36c140c097b932f0dd5d5
+      name: show-sbom
+      terminated:
+        containerID: >-
+          cri-o://6b18d743bb70bdc2ccb2dbb37d80571ed897fca535ace395329032e68983abd7
+        exitCode: 0
+        finishedAt: '2023-08-30T19:01:36Z'
+        reason: Completed
+        startedAt: '2023-08-30T19:01:35Z'
+  taskSpec:
+    description: >-
+      Shows the Software Bill of Materials (SBOM) generated for the built image
+      in CyloneDX JSON format.
+    params:
+      - description: Fully qualified image name to show SBOM for.
+        name: IMAGE_URL
+        type: string
+    steps:
+      - env:
+          - name: IMAGE_URL
+            value: >-
+              quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+        image: 'quay.io/redhat-appstudio/cosign:v2.1.1'
+        name: show-sbom
+        resources: {}
+        script: |
+          #!/busybox/sh
+          cosign download sbom $IMAGE_URL 2>err
+          RET=$?
+          if [ $RET -ne 0 ]; then
+            echo Failed to get SBOM >&2
+            cat err >&2
+          fi
+          exit $RET
+`
+
+const tooBigNumTRSummYaml = `
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  annotations:
+    pipeline.tekton.dev/release: b8ad1b2
+    tekton.dev/tags: 'appstudio, hacbs'
+    results.tekton.dev/record: >-
+      test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45/records/42a9b7bd-b75e-429b-af1d-4add9543d051
+    results.tekton.dev/log: >-
+      test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45/logs/022a5cfc-1763-3ce6-b21c-29f0b6ea1461
+    build.appstudio.redhat.com/pipeline_name: docker-build
+    build.appstudio.openshift.io/repo: >-
+      https://github.com/nodeshift-starters/devfile-sample?rev=cb64992eebf5c18900d283a9bca08b4ab5db2874
+    chains.tekton.dev/signed: 'true'
+    tekton.dev/pipelines.minVersion: 0.12.1
+    results.tekton.dev/result: test-rhtap-95-tenant/results/579cdd9f-5dcc-436c-ab9b-eb770530ff45
+    build.appstudio.redhat.com/target_branch: main
+    results.tekton.dev/childReadyForDeletion: 'true'
+    build.appstudio.redhat.com/bundle: >-
+      quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:docker-build-124dd76239d17a3bdb936ed26e403c9c9c4e947b
+    build.appstudio.redhat.com/commit_sha: cb64992eebf5c18900d283a9bca08b4ab5db2874
+  name: devfile-sample-nsj6m-show-summary
+  uid: 42a9b7bd-b75e-429b-af1d-4add9543d051
+  creationTimestamp: '2023-08-30T19:01:30Z'
+  generation: 1
+  managedFields:
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:results.tekton.dev/result': {}
+            'f:build.appstudio.redhat.com/pipeline_name': {}
+            'f:build.appstudio.redhat.com/bundle': {}
+            'f:build.appstudio.redhat.com/target_branch': {}
+            'f:build.appstudio.redhat.com/commit_sha': {}
+            .: {}
+            'f:pipeline.tekton.dev/release': {}
+            'f:tekton.dev/tags': {}
+            'f:build.appstudio.openshift.io/repo': {}
+            'f:tekton.dev/pipelines.minVersion': {}
+          'f:labels':
+            'f:tekton.dev/task': {}
+            'f:tekton.dev/pipelineTask': {}
+            'f:pipelines.openshift.io/used-by': {}
+            'f:pipelines.appstudio.openshift.io/type': {}
+            'f:appstudio.openshift.io/application': {}
+            'f:tekton.dev/memberOf': {}
+            .: {}
+            'f:tekton.dev/pipelineRun': {}
+            'f:appstudio.openshift.io/component': {}
+            'f:pipelines.openshift.io/strategy': {}
+            'f:pipelines.openshift.io/runtime': {}
+            'f:app.kubernetes.io/version': {}
+            'f:tekton.dev/pipeline': {}
+          'f:ownerReferences':
+            .: {}
+            'k:{"uid":"579cdd9f-5dcc-436c-ab9b-eb770530ff45"}': {}
+        'f:spec':
+          .: {}
+          'f:params': {}
+          'f:serviceAccountName': {}
+          'f:taskRef':
+            .: {}
+            'f:kind': {}
+            'f:params': {}
+            'f:resolver': {}
+      manager: openshift-pipelines-controller
+      operation: Update
+      time: '2023-08-30T19:01:30Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:chains.tekton.dev/signed': {}
+          'f:finalizers':
+            .: {}
+            'v:"chains.tekton.dev"': {}
+      manager: openshift-pipelines-chains-controller
+      operation: Update
+      time: '2023-08-30T19:01:36Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:status':
+          .: {}
+          'f:completionTime': {}
+          'f:conditions': {}
+          'f:podName': {}
+          'f:startTime': {}
+          'f:steps': {}
+          'f:taskSpec':
+            .: {}
+            'f:description': {}
+            'f:params': {}
+            'f:steps': {}
+      manager: openshift-pipelines-controller
+      operation: Update
+      subresource: status
+      time: '2023-08-30T19:01:36Z'
+    - apiVersion: tekton.dev/v1beta1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:results.tekton.dev/childReadyForDeletion': {}
+            'f:results.tekton.dev/log': {}
+            'f:results.tekton.dev/record': {}
+      manager: watcher
+      operation: Update
+      time: '2023-08-30T19:02:15Z'
+  namespace: test-rhtap-95-tenant
+  ownerReferences:
+    - apiVersion: tekton.dev/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: PipelineRun
+      name: devfile-sample-nsj6m
+      uid: 579cdd9f-5dcc-436c-ab9b-eb770530ff45
+  finalizers:
+    - chains.tekton.dev
+  labels:
+    tekton.dev/memberOf: finally
+    appstudio.openshift.io/component: devfile-sample
+    pipelines.openshift.io/runtime: generic
+    pipelines.openshift.io/strategy: docker
+    app.kubernetes.io/version: '0.1'
+    tekton.dev/pipeline: docker-build
+    pipelines.openshift.io/used-by: build-cloud
+    app.kubernetes.io/managed-by: tekton-pipelines
+    appstudio.openshift.io/application: load-app-7089021e-3585-438c-85e8-0a1ec8381a9f
+    tekton.dev/task: summary
+    tekton.dev/pipelineTask: show-summary
+    pipelines.appstudio.openshift.io/type: build
+    tekton.dev/pipelineRun: devfile-sample-nsj6m
+spec:
+  params:
+    - name: pipelinerun-name
+      value: devfile-sample-nsj6m
+    - name: git-url
+      value: >-
+        https://github.com/nodeshift-starters/devfile-sample.git?rev=cb64992eebf5c18900d283a9bca08b4ab5db2874
+    - name: image-url
+      value: >-
+        quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+    - name: build-task-status
+      value: Succeeded
+  serviceAccountName: appstudio-pipeline
+  taskRef:
+    kind: Task
+    params:
+      - name: name
+        value: summary
+      - name: bundle
+        value: >-
+          quay.io/redhat-appstudio-tekton-catalog/pull-request-builds:summary-0.1@sha256:e69f53a3991d7088d8aa2827365ab761ab7524d4269f296b4a78b0f085789d30
+      - name: kind
+        value: task
+    resolver: bundles
+  timeout: 1h0m0s
+status:
+  completionTime: '2023-08-30T19:01:36Z'
+  conditions:
+    - lastTransitionTime: '2023-08-30T19:01:36Z'
+      message: All Steps have completed executing
+      reason: Succeeded
+      status: 'True'
+      type: Succeeded
+  podName: devfile-sample-nsj6m-show-summary-pod
+  startTime: '2023-08-30T19:01:30Z'
+  steps:
+    - container: step-appstudio-summary
+      imageID: >-
+        registry.access.redhat.com/ubi9/ubi-minimal@sha256:dc02c6aa8199beb8ed13312d7116a94aa87b5412886bbe358845d3f0626c0f1e
+      name: appstudio-summary
+      terminated:
+        containerID: >-
+          cri-o://149f69bd03f32d573735805c98eb57f5ef7de8dd4e91a207a084bbe1f60b907d
+        exitCode: 0
+        finishedAt: '2023-08-30T19:01:35Z'
+        reason: Completed
+        startedAt: '2023-08-30T19:01:35Z'
+  taskSpec:
+    description: >-
+      Summary Pipeline Task. Prints PipelineRun information, removes image
+      repository secret used by the PipelineRun.
+    params:
+      - description: pipeline-run to annotate
+        name: pipelinerun-name
+        type: string
+      - description: Git URL
+        name: git-url
+        type: string
+      - description: Image URL
+        name: image-url
+        type: string
+      - default: Succeeded
+        description: State of build task in pipelineRun
+        name: build-task-status
+        type: string
+    steps:
+      - env:
+          - name: GIT_URL
+            value: >-
+              https://github.com/nodeshift-starters/devfile-sample.git?rev=cb64992eebf5c18900d283a9bca08b4ab5db2874
+          - name: IMAGE_URL
+            value: >-
+              quay.io/redhat-user-workloads-stage/test-rhtap-95-tenant/load-app-7089021e-3585-438c-85e8-0a1ec8381a9f/devfile-sample:build-a5b73-1693422002
+          - name: PIPELINERUN_NAME
+            value: devfile-sample-nsj6m
+          - name: BUILD_TASK_STATUS
+            value: Succeeded
+        image: >-
+          registry.access.redhat.com/ubi9/ubi-minimal:9.2-717@sha256:dc02c6aa8199beb8ed13312d7116a94aa87b5412886bbe358845d3f0626c0f1e
+        name: appstudio-summary
+        resources: {}
+        script: |
+          #!/usr/bin/env bash
+          echo
+          echo "Build Summary:"
+          echo
+          echo "Build repository: $GIT_URL"
+          if [ "$BUILD_TASK_STATUS" == "Succeeded" ]; then
+            echo "Generated Image is in : $IMAGE_URL"
+          fi
+          echo
+          echo End Summary
+`

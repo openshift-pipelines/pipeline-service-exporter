@@ -303,6 +303,7 @@ func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun
 			if !tr2.Status.CompletionTime.Time.After(tr.CreationTimestamp.Time) {
 				ctrl.Log.V(4).Info(fmt.Sprintf("%s did not complete after so use it to compute gap for current task %s", taskRunTaskRef(tr2, pr), taskRunTaskRef(tr, pr)))
 				trToCalculateWith = tr2
+				timeToCalculateWith = tr2.Status.CompletionTime.Time
 				break
 			}
 			ctrl.Log.V(4).Info(fmt.Sprintf("skipping %s as a gap candidate for current task %s is OK", taskRunTaskRef(tr2, pr), taskRunTaskRef(tr, pr)))

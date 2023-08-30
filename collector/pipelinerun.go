@@ -114,11 +114,8 @@ func (f *taskRunGapEventFilter) Update(e event.UpdateEvent) bool {
 	// calculate when the pipelinerun transtions to done, and then compare the kinds; note - do not need to check for cancel,
 	// as eventually those PRs will be marked done once any running TRs are done
 	if okold && oknew {
+		// NOTE: confirmed that the succeeded condition is marked done and the completion timestamp is set at the same time
 		if !oldPR.IsDone() && newPR.IsDone() {
-			return true
-		}
-		// in case there is a gap between a pipelinerun being marked done but the completion timestamp is not set yet
-		if oldPR.Status.CompletionTime == nil && newPR.Status.CompletionTime != nil {
 			return true
 		}
 	}
