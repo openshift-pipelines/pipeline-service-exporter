@@ -32,9 +32,9 @@ func TestPipelineRunGapCollection(t *testing.T) {
 
 	var err error
 	// first we test with the samples pulled from actual RHTAP yaml to best capture the parallel task executions
-	pr := &v1beta1.PipelineRun{}
+	prs := []v1beta1.PipelineRun{}
 	trs := []v1beta1.TaskRun{}
-	pr, err = pipelineRunFromActualRHTAPYaml()
+	prs, err = pipelineRunFromActualRHTAPYaml()
 	if err != nil {
 		t.Fatalf(fmt.Sprintf("%s", err.Error()))
 	}
@@ -48,17 +48,19 @@ func TestPipelineRunGapCollection(t *testing.T) {
 		err = c.Create(ctx, &tr)
 		assert.NoError(t, err)
 	}
-	err = c.Create(ctx, pr)
-	assert.NoError(t, err)
-	request := reconcile.Request{
-		NamespacedName: types.NamespacedName{
-			Namespace: pr.Namespace,
-			Name:      pr.Name,
-		},
+	for _, pr := range prs {
+		err = c.Create(ctx, &pr)
+		assert.NoError(t, err)
+		request := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: pr.Namespace,
+				Name:      pr.Name,
+			},
+		}
+		_, err = gapReconciler.Reconcile(ctx, request)
+		label := prometheus.Labels{NS_LABEL: pr.Namespace}
+		validateHistogramVec(t, gapReconciler.prCollector.trGaps, label, true)
 	}
-	_, err = gapReconciler.Reconcile(ctx, request)
-	label := prometheus.Labels{NS_LABEL: pr.Namespace}
-	validateHistogramVec(t, gapReconciler.prCollector.trGaps, label)
 
 	// then some additional unit tests were we build simpler pipelineruns/taskruns that capture paths
 	// related to completion times not being set
@@ -178,7 +180,7 @@ func TestPipelineRunGapCollection(t *testing.T) {
 	for _, pipelineRun := range mockPipelineRuns {
 		err = c.Create(ctx, pipelineRun)
 		assert.NoError(t, err)
-		request = reconcile.Request{
+		request := reconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Namespace: pipelineRun.Namespace,
 				Name:      pipelineRun.Name,
@@ -187,8 +189,8 @@ func TestPipelineRunGapCollection(t *testing.T) {
 		_, err = gapReconciler.Reconcile(ctx, request)
 	}
 
-	label = prometheus.Labels{NS_LABEL: "test-namespace"}
-	validateHistogramVec(t, gapReconciler.prCollector.trGaps, label)
+	label := prometheus.Labels{NS_LABEL: "test-namespace"}
+	validateHistogramVec(t, gapReconciler.prCollector.trGaps, label, false)
 
 }
 
@@ -345,10 +347,10 @@ func TestPipelineRunScheduleCollection(t *testing.T) {
 	}
 
 	label := prometheus.Labels{NS_LABEL: "test-namespace"}
-	validateHistogramVec(t, schedReconciler.prCollector.durationScheduled, label)
+	validateHistogramVec(t, schedReconciler.prCollector.durationScheduled, label, false)
 }
 
-func validateHistogramVec(t *testing.T, h *prometheus.HistogramVec, labels prometheus.Labels) {
+func validateHistogramVec(t *testing.T, h *prometheus.HistogramVec, labels prometheus.Labels, checkMax bool) {
 	observer, err := h.GetMetricWith(labels)
 	assert.NoError(t, err)
 	assert.NotNil(t, observer)
@@ -360,6 +362,12 @@ func validateHistogramVec(t *testing.T, h *prometheus.HistogramVec, labels prome
 	assert.NotZero(t, *metric.Histogram.SampleCount)
 	assert.NotNil(t, metric.Histogram.SampleSum)
 	assert.Greater(t, *metric.Histogram.SampleSum, float64(-1))
+	if checkMax {
+		// for now, we are not tracking gap histograms example by example; but rather we
+		// have determined the max histogram (currently 7000) manually and make sure everyone
+		// is under that
+		assert.Less(t, *metric.Histogram.SampleSum, float64(7001))
+	}
 }
 
 func validateGaugeVec(t *testing.T, g *prometheus.GaugeVec, labels prometheus.Labels) {
@@ -374,22 +382,33 @@ func validateGaugeVec(t *testing.T, g *prometheus.GaugeVec, labels prometheus.La
 	assert.Greater(t, *metric.Gauge.Value, float64(-1))
 }
 
-func pipelineRunFromActualRHTAPYaml() (*v1beta1.PipelineRun, error) {
-	pr := &v1beta1.PipelineRun{}
-	buf := []byte(prYaml)
+func pipelineRunFromActualRHTAPYaml() ([]v1beta1.PipelineRun, error) {
+	prs := []v1beta1.PipelineRun{}
+	yamlStrings := []string{tooBigNumPRYaml,
+		prYaml}
 
 	v1beta1.AddToScheme(scheme.Scheme)
 	decoder := scheme.Codecs.UniversalDecoder()
-	_, _, err := decoder.Decode(buf, nil, pr)
-	if err != nil {
-		return nil, err
+	for _, y := range yamlStrings {
+		buf := []byte(y)
+		pr := &v1beta1.PipelineRun{}
+		_, _, err := decoder.Decode(buf, nil, pr)
+		if err != nil {
+			return nil, err
+		}
+		prs = append(prs, *pr)
 	}
-	return pr, nil
+	return prs, nil
 }
 
 func taskRunsFromActualRHTAPYaml() ([]v1beta1.TaskRun, error) {
 	trs := []v1beta1.TaskRun{}
-	yamlStrings := []string{trInitYaml,
+	yamlStrings := []string{tooBigNumTRInitYaml,
+		tooBigNumTRCloneYaml,
+		tooBigNumTRBuildYaml,
+		tooBigNumTRSbomYaml,
+		tooBigNumTRSummYaml,
+		trInitYaml,
 		trCloneYaml,
 		trSbomJsonCheckYaml,
 		trBuildYaml,
@@ -690,5 +709,5 @@ func TestTaskRunCollection(t *testing.T) {
 	}
 
 	label := prometheus.Labels{NS_LABEL: "test-namespace"}
-	validateHistogramVec(t, reconciler.trCollector.durationScheduled, label)
+	validateHistogramVec(t, reconciler.trCollector.durationScheduled, label, false)
 }
