@@ -58,7 +58,7 @@ func TestPipelineRunGapCollection(t *testing.T) {
 			},
 		}
 		_, err = gapReconciler.Reconcile(ctx, request)
-		label := prometheus.Labels{NS_LABEL: pr.Namespace}
+		label := prometheus.Labels{NS_LABEL: pr.Namespace, STATUS_LABEL: SUCCEEDED}
 		validateHistogramVec(t, gapReconciler.prCollector.trGaps, label, true)
 	}
 
@@ -189,7 +189,7 @@ func TestPipelineRunGapCollection(t *testing.T) {
 		_, err = gapReconciler.Reconcile(ctx, request)
 	}
 
-	label := prometheus.Labels{NS_LABEL: "test-namespace"}
+	label := prometheus.Labels{NS_LABEL: "test-namespace", STATUS_LABEL: SUCCEEDED}
 	validateHistogramVec(t, gapReconciler.prCollector.trGaps, label, false)
 
 }
