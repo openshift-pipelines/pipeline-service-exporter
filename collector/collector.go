@@ -22,6 +22,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/pkg/apis"
 	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,6 +42,9 @@ const (
 	TASK_NAME_LABEL                                          = "taskname"
 	COMPLETED_LABEL                                          = "completed"
 	UPCOMING_LABEL                                           = "upcoming"
+	STATUS_LABEL                                             = "status"
+	SUCCEEDED                                                = "succeded"
+	FAILED                                                   = "failed"
 )
 
 type PipelineRunScheduledCollector struct {
@@ -208,17 +212,17 @@ func (c *ThrottledByPVCQuotaCollector) zeroPVCThrottle(ns string) {
 }
 
 func NewPipelineRunTaskRunGapCollector() *PipelineRunTaskRunGapCollector {
-	labelNames := []string{NS_LABEL}
+	labelNames := []string{NS_LABEL, STATUS_LABEL}
 	additionalLabels := optionalMetricEnabled(ENABLE_GAP_METRIC_ADDITIONAL_LABELS)
 	if additionalLabels {
 		labelNames = append(labelNames, PIPELINE_NAME_LABEL, COMPLETED_LABEL, UPCOMING_LABEL)
 	}
 	trGaps := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "pipelinerun_gap_between_taskruns_milliseconds",
-		Help: "Duration in milliseconds between a taskrun completing and the next taskrun being created within a pipelinerun.  If a pipelinerun only has one taskrun, use pipelinerun_duration_scheduled_seconds.",
+		Help: "Duration in milliseconds between a taskrun completing and the next taskrun being created within a pipelinerun.  For a pipelinerun's first taskrun, the duration is the time between that taskrun's creation and the pipelinerun's creation.",
 		// reminder: exponential buckets need a start value greater than 0
-		// the results in buckets of 0.1, 0.5, 2.5, 12.5, 62.5, 312.5 milliseconds
-		Buckets: prometheus.ExponentialBuckets(0.1, 5, 6),
+		// the results in buckets of 100, 500, 2500, 12500, 62500, 312500 milliseconds
+		Buckets: prometheus.ExponentialBuckets(float64(100), float64(5), 6),
 	}, labelNames)
 
 	pipelineRunTaskRunGapCollector := &PipelineRunTaskRunGapCollector{
@@ -273,7 +277,20 @@ func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun
 	})
 	prRef := pipelineRunPipelineRef(pr)
 	for index, tr := range sortedTaskRunsByCreateTimes {
-		labels := map[string]string{NS_LABEL: pr.Namespace}
+		succeedCondition := pr.Status.GetCondition(apis.ConditionSucceeded)
+		if succeedCondition == nil {
+			ctrl.Log.Info(fmt.Sprintf("WARNING: pipielinerun %s:%s marked done but has nil succeed condition", pr.Namespace, pr.Name))
+			continue
+		}
+		if succeedCondition.IsUnknown() {
+			ctrl.Log.Info(fmt.Sprintf("WARNING: pipielinerun %s:%s marked done but has unknown succeed condition", pr.Namespace, pr.Name))
+			continue
+		}
+		status := SUCCEEDED
+		if succeedCondition.IsFalse() {
+			status = FAILED
+		}
+		labels := map[string]string{NS_LABEL: pr.Namespace, STATUS_LABEL: status}
 		if c.additionalLabels {
 			labels[PIPELINE_NAME_LABEL] = prRef
 		}
