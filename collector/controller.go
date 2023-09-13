@@ -105,5 +105,15 @@ func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	err = SetupTaskReferenceWaitTimeController(mgr)
+	if err != nil {
+		return nil, err
+	}
+
+	err = SetupPipelineReferenceWaitTimeController(mgr)
+	if err != nil {
+		return nil, err
+	}
 	return mgr, nil
 }
