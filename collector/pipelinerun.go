@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tektoncd/pipeline/pkg/reconciler/volumeclaim"
 	"knative.dev/pkg/apis"
 	"os"
@@ -32,6 +33,7 @@ type ReconcilePipelineRunScheduled struct {
 }
 
 type startTimeEventFilter struct {
+	metric *prometheus.HistogramVec
 }
 
 func (f *startTimeEventFilter) Create(event.CreateEvent) bool {
@@ -49,7 +51,8 @@ func (f *startTimeEventFilter) Update(e event.UpdateEvent) bool {
 	newPR, oknew := e.ObjectNew.(*v1beta1.PipelineRun)
 	if okold && oknew {
 		if oldPR.Status.StartTime == nil && newPR.Status.StartTime != nil {
-			return true
+			bumpPipelineRunScheduledDuration(calculateScheduledDurationPipelineRun(newPR), newPR, f.metric)
+			return false
 		}
 	}
 	return false
@@ -60,35 +63,18 @@ func (f *startTimeEventFilter) Generic(event.GenericEvent) bool {
 }
 
 func SetupPipelineRunScheduleDurationController(mgr ctrl.Manager) error {
+	filter := &startTimeEventFilter{
+		metric: NewPipelineRunScheduledMetric(),
+	}
 	reconciler := &ReconcilePipelineRunScheduled{
 		client:        mgr.GetClient(),
 		scheme:        mgr.GetScheme(),
 		eventRecorder: mgr.GetEventRecorderFor("MetricExporterPipelineRunsScheduled"),
-		prCollector:   NewPipelineRunScheduledCollector(),
 	}
-	return ctrl.NewControllerManagedBy(mgr).For(&v1beta1.PipelineRun{}).WithEventFilter(&startTimeEventFilter{}).Complete(reconciler)
+	return ctrl.NewControllerManagedBy(mgr).For(&v1beta1.PipelineRun{}).WithEventFilter(filter).Complete(reconciler)
 }
 
 func (r *ReconcilePipelineRunScheduled) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithCancel(ctx)
-	defer cancel()
-	log := log.FromContext(ctx)
-
-	//TODO remember, keep track of when pipeline-service and RHTAP starts moving from v1beta1 to v1
-	pr := &v1beta1.PipelineRun{}
-	err := r.client.Get(ctx, types.NamespacedName{Namespace: request.Namespace, Name: request.Name}, pr)
-	if err != nil && !errors.IsNotFound(err) {
-		return reconcile.Result{}, err
-	}
-	if err != nil {
-		log.V(4).Info(fmt.Sprintf("ignoring deleted pipelinerun %q", request.NamespacedName))
-		return reconcile.Result{}, nil
-	}
-
-	// based on our WithEventFilter we should only be getting called with the start time is set
-	log.V(4).Info(fmt.Sprintf("recording schedule duration for %q", request.NamespacedName))
-	r.prCollector.bumpScheduledDuration(pr, calculateScheduledDurationPipelineRun(pr))
 	return reconcile.Result{}, nil
 }
 

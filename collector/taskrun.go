@@ -2,27 +2,24 @@ package collector
 
 import (
 	"context"
-	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-type ReconcileTaskRun struct {
+type ReconcileTaskRunScheduled struct {
 	client        client.Client
 	scheme        *runtime.Scheme
 	eventRecorder record.EventRecorder
-	trCollector   *TaskRunCollector
 }
 
 type trStartTimeEventFilter struct {
+	metric *prometheus.HistogramVec
 }
 
 func (f *trStartTimeEventFilter) Create(event.CreateEvent) bool {
@@ -43,41 +40,23 @@ func (f *trStartTimeEventFilter) Update(e event.UpdateEvent) bool {
 	newTR, oknew := e.ObjectNew.(*v1beta1.TaskRun)
 	if okold && oknew {
 		if oldTR.Status.StartTime == nil && newTR.Status.StartTime != nil {
-			return true
+			bumpTaskRunScheduledDuration(calculateScheduledDurationTaskRun(newTR), newTR, f.metric)
+			return false
 		}
 	}
 	return false
 }
 
-func SetupTaskRunController(mgr ctrl.Manager) error {
-	reconciler := &ReconcileTaskRun{
+func SetupTaskRunScheduleDurationController(mgr ctrl.Manager) error {
+	filter := &trStartTimeEventFilter{metric: NewTaskRunScheduledMetric()}
+	reconciler := &ReconcileTaskRunScheduled{
 		client:        mgr.GetClient(),
 		scheme:        mgr.GetScheme(),
-		eventRecorder: mgr.GetEventRecorderFor("MetricExporterTaskRuns"),
-		trCollector:   NewTaskRunCollector(),
+		eventRecorder: mgr.GetEventRecorderFor("MetricExporterScheduledTaskRuns"),
 	}
-	return ctrl.NewControllerManagedBy(mgr).For(&v1beta1.TaskRun{}).WithEventFilter(&trStartTimeEventFilter{}).Complete(reconciler)
+	return ctrl.NewControllerManagedBy(mgr).For(&v1beta1.TaskRun{}).WithEventFilter(filter).Complete(reconciler)
 }
 
-func (r *ReconcileTaskRun) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithCancel(ctx)
-	defer cancel()
-	log := log.FromContext(ctx)
-
-	//TODO remember, keep track of when pipeline-service and RHTAP starts moving from v1beta1 to v1
-	tr := &v1beta1.TaskRun{}
-	err := r.client.Get(ctx, types.NamespacedName{Namespace: request.Namespace, Name: request.Name}, tr)
-	if err != nil && !errors.IsNotFound(err) {
-		return reconcile.Result{}, err
-	}
-	if err != nil {
-		log.V(4).Info(fmt.Sprintf("ignoring deleted taskrun %q", request.NamespacedName))
-		return reconcile.Result{}, nil
-	}
-
-	// based on our WithEventFilter we should only be getting called with the start time is set
-	log.V(4).Info(fmt.Sprintf("recording schedule duration for %q", request.NamespacedName))
-	r.trCollector.bumpScheduledDuration(tr, calculateScheduledDurationTaskRun(tr))
+func (r *ReconcileTaskRunScheduled) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	return reconcile.Result{}, nil
 }

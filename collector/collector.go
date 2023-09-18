@@ -20,31 +20,28 @@ import (
 	"context"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
 
 const (
-	ENABLE_PIPELINERUN_SCHEDULED_DURATION_PIPELINENAME_LABEL = "ENABLE_PIPELINERUN_SCHEDULED_DURATION_PIPELINENAME_LABEL"
-	ENABLE_TASKRUN_SCHEDULED_DURATION_TASKNAME_LABEL         = "ENABLE_TASKRUN_SCHEDULED_DURATION_TASKNAME_LABEL"
-	ENABLE_GAP_METRIC_ADDITIONAL_LABELS                      = "ENABLE_GAP_METRIC_ADDITIONAL_LABELS"
-	NS_LABEL                                                 = "namespace"
-	PIPELINE_NAME_LABEL                                      = "pipelinename"
-	TASK_NAME_LABEL                                          = "taskname"
-	COMPLETED_LABEL                                          = "completed"
-	UPCOMING_LABEL                                           = "upcoming"
-	STATUS_LABEL                                             = "status"
-	SUCCEEDED                                                = "succeded"
-	FAILED                                                   = "failed"
+	ENABLE_GAP_METRIC_ADDITIONAL_LABELS = "ENABLE_GAP_METRIC_ADDITIONAL_LABELS"
+	NS_LABEL                            = "namespace"
+	PIPELINE_NAME_LABEL                 = "pipelinename"
+	TASK_NAME_LABEL                     = "taskname"
+	COMPLETED_LABEL                     = "completed"
+	UPCOMING_LABEL                      = "upcoming"
+	STATUS_LABEL                        = "status"
+	SUCCEEDED                           = "succeded"
+	FAILED                              = "failed"
 )
 
 type PipelineRunScheduledCollector struct {
@@ -61,24 +58,13 @@ type ThrottledByPVCQuotaCollector struct {
 	pvcThrottle *prometheus.GaugeVec
 }
 
-type TaskRunCollector struct {
+type TaskRunScheduledCollector struct {
 	durationScheduled *prometheus.HistogramVec
 	trSchedNameLabel  bool
 }
 
-func optionalLabelEnabled(labelName string) bool {
-	env := os.Getenv(labelName)
-	enabled := len(env) > 0
-	// any random setting means true
-	if enabled {
-		// allow for users to turn off by setting to false
-		bv, err := strconv.ParseBool(env)
-		if err == nil && !bv {
-			return false
-		}
-		return true
-	}
-	return false
+type TaskRunRunningCollector struct {
+	durationRunning *prometheus.HistogramVec
 }
 
 func pipelineRunPipelineRef(pr *v1beta1.PipelineRun) string {
@@ -104,88 +90,47 @@ func pipelineRunPipelineRef(pr *v1beta1.PipelineRun) string {
 	return val
 }
 
-func taskRunTaskRef(tr *v1beta1.TaskRun, pr *v1beta1.PipelineRun) string {
-	val := ""
-	ref := tr.Spec.TaskRef
-	if ref != nil {
-		val = ref.Name
-		if len(val) == 0 {
-			for _, p := range ref.Params {
-				if strings.TrimSpace(p.Name) == "name" {
-					return p.Value.StringVal
-				}
-			}
-		}
-	} else {
-		if len(tr.GenerateName) > 0 {
-			return tr.GenerateName
-		}
-		if pr != nil {
-			if pr.Spec.PipelineSpec != nil {
-				ps := pr.Spec.PipelineSpec
-				if ps != nil {
-					for _, t := range ps.Tasks {
-						name := t.Name
-						suffix := fmt.Sprintf("-%s", name)
-						if len(suffix) < 2 {
-							for _, p := range t.Params {
-								if p.Name == "name" {
-									name = p.Value.StringVal
-									suffix = fmt.Sprintf("-%s", name)
-									break
-								}
-							}
-						}
-						if strings.HasSuffix(tr.Name, suffix) {
-							return name
-						}
-
-					}
-				}
-			}
-			for _, t := range pr.Spec.TaskRunSpecs {
-				suffix := fmt.Sprintf("-%s", t.PipelineTaskName)
-				if strings.HasSuffix(tr.Name, suffix) {
-					return t.PipelineTaskName
-				}
-			}
-		}
-		// at this point, the taskrun name should not have any random aspects, and is
-		// essentially a constant, with a minimal cardinality impact
-		val = tr.Name
+func taskRef(labels map[string]string) string {
+	task, _ := labels[pipeline.TaskLabelKey]
+	pipelineTask, _ := labels[pipeline.PipelineTaskLabelKey]
+	clusterTask, _ := labels[pipeline.ClusterTaskLabelKey]
+	taskRun, _ := labels[pipeline.TaskRunLabelKey]
+	switch {
+	case len(task) > 0:
+		return task
+	case len(pipelineTask) > 0:
+		return pipelineTask
+	case len(clusterTask) > 0:
+		return clusterTask
+	case len(taskRun) > 0:
+		return taskRun
 	}
-	return val
+	return ""
 }
 
-func NewPipelineRunScheduledCollector() *PipelineRunScheduledCollector {
-	labelNames := []string{NS_LABEL}
-	prSchedStatNameEnabled := optionalLabelEnabled(ENABLE_PIPELINERUN_SCHEDULED_DURATION_PIPELINENAME_LABEL)
-	if prSchedStatNameEnabled {
-		labelNames = append(labelNames, PIPELINE_NAME_LABEL)
-	}
+func bumpTaskRunScheduledDuration(scheduleDuration float64, tr *v1beta1.TaskRun, metric *prometheus.HistogramVec) {
+	labels := map[string]string{NS_LABEL: tr.Namespace, TASK_NAME_LABEL: taskRef(tr.Labels)}
+	metric.With(labels).Observe(scheduleDuration)
+}
+
+func NewPipelineRunScheduledMetric() *prometheus.HistogramVec {
+	labelNames := []string{NS_LABEL, PIPELINE_NAME_LABEL}
 	durationScheduled := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "pipelinerun_duration_scheduled_seconds",
-		Help: "Duration in seconds for a PipelineRun to be scheduled.",
+		Help: "Duration in seconds for a PipelineRun to be 'scheduled', meaning it has been received by the Tekton controller.  This is an indication of how quickly create events from the API server are arriving to the Tekton controller.",
 		// reminder: exponential buckets need a start value greater than 0
 		// the results in buckets of 0.1, 0.5, 2.5, 12.5, 62.5, 312.5 seconds
 		Buckets: prometheus.ExponentialBuckets(0.1, 5, 6),
 	}, labelNames)
 
-	pipelineRunScheduledCollector := &PipelineRunScheduledCollector{
-		durationScheduled: durationScheduled,
-		prSchedNameLabel:  prSchedStatNameEnabled,
-	}
 	metrics.Registry.MustRegister(durationScheduled)
 
-	return pipelineRunScheduledCollector
+	return durationScheduled
 }
 
-func (c *PipelineRunScheduledCollector) bumpScheduledDuration(pr *v1beta1.PipelineRun, scheduleDuration float64) {
-	labels := map[string]string{NS_LABEL: pr.Namespace}
-	if c.prSchedNameLabel {
-		labels[PIPELINE_NAME_LABEL] = pipelineRunPipelineRef(pr)
-	}
-	c.durationScheduled.With(labels).Observe(scheduleDuration)
+func bumpPipelineRunScheduledDuration(scheduleDuration float64, pr *v1beta1.PipelineRun, metric *prometheus.HistogramVec) {
+	labels := map[string]string{NS_LABEL: pr.Namespace, PIPELINE_NAME_LABEL: pipelineRunPipelineRef(pr)}
+	metric.With(labels).Observe(scheduleDuration)
 }
 
 func NewPVCThrottledCollector() *ThrottledByPVCQuotaCollector {
@@ -296,12 +241,12 @@ func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun
 		}
 
 		if index == 0 {
-			ctrl.Log.V(4).Info(fmt.Sprintf("first task %s for pipeline %s", taskRunTaskRef(tr, pr), prRef))
+			ctrl.Log.V(4).Info(fmt.Sprintf("first task %s for pipeline %s", taskRef(tr.Labels), prRef))
 			// our first task is simple, just work off of the pipelinerun
 			gap := tr.CreationTimestamp.Time.Sub(pr.CreationTimestamp.Time).Milliseconds()
 			if c.additionalLabels {
 				labels[COMPLETED_LABEL] = prRef
-				labels[UPCOMING_LABEL] = taskRunTaskRef(tr, pr)
+				labels[UPCOMING_LABEL] = taskRef(tr.Labels)
 			}
 			c.trGaps.With(labels).Observe(float64(gap))
 			continue
@@ -314,11 +259,11 @@ func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun
 		// that means parallel taskruns, and we work off of the pipelinerun; NOTE: this focuses on "top level" parallel task runs
 		// with absolutely no dependencies.  Once any sort of dependency is established, there are no more top level parallel taskruns.
 		if firstKid.Status.CompletionTime != nil && firstKid.Status.CompletionTime.Time.After(tr.CreationTimestamp.Time) {
-			ctrl.Log.V(4).Info(fmt.Sprintf("task %s considered parallel for pipeline %s", taskRunTaskRef(tr, pr), prRef))
+			ctrl.Log.V(4).Info(fmt.Sprintf("task %s considered parallel for pipeline %s", taskRef(tr.Labels), prRef))
 			gap := tr.CreationTimestamp.Time.Sub(pr.CreationTimestamp.Time).Milliseconds()
 			if c.additionalLabels {
 				labels[COMPLETED_LABEL] = prRef
-				labels[UPCOMING_LABEL] = taskRunTaskRef(tr, pr)
+				labels[UPCOMING_LABEL] = taskRef(tr.Labels)
 			}
 			c.trGaps.With(labels).Observe(float64(gap))
 			continue
@@ -343,19 +288,19 @@ func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun
 			if tr2.Name == tr.Name {
 				continue
 			}
-			ctrl.Log.V(4).Info(fmt.Sprintf("comparing candidate %s to current task %s", taskRunTaskRef(tr2, pr), taskRunTaskRef(tr, pr)))
+			ctrl.Log.V(4).Info(fmt.Sprintf("comparing candidate %s to current task %s", taskRef(tr2.Labels), taskRef(tr.Labels)))
 			if !tr2.Status.CompletionTime.Time.After(tr.CreationTimestamp.Time) {
-				ctrl.Log.V(4).Info(fmt.Sprintf("%s did not complete after so use it to compute gap for current task %s", taskRunTaskRef(tr2, pr), taskRunTaskRef(tr, pr)))
+				ctrl.Log.V(4).Info(fmt.Sprintf("%s did not complete after so use it to compute gap for current task %s", taskRef(tr2.Labels), taskRef(tr.Labels)))
 				trToCalculateWith = tr2
 				timeToCalculateWith = tr2.Status.CompletionTime.Time
 				break
 			}
-			ctrl.Log.V(4).Info(fmt.Sprintf("skipping %s as a gap candidate for current task %s is OK", taskRunTaskRef(tr2, pr), taskRunTaskRef(tr, pr)))
+			ctrl.Log.V(4).Info(fmt.Sprintf("skipping %s as a gap candidate for current task %s is OK", taskRef(tr2.Labels), taskRef(tr.Labels)))
 		}
 		gap := tr.CreationTimestamp.Time.Sub(timeToCalculateWith).Milliseconds()
 		if c.additionalLabels {
-			labels[COMPLETED_LABEL] = taskRunTaskRef(trToCalculateWith, pr)
-			labels[UPCOMING_LABEL] = taskRunTaskRef(tr, pr)
+			labels[COMPLETED_LABEL] = taskRef(trToCalculateWith.Labels)
+			labels[UPCOMING_LABEL] = taskRef(tr.Labels)
 		}
 		c.trGaps.With(labels).Observe(float64(gap))
 	}
@@ -363,42 +308,40 @@ func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun
 	return
 }
 
-func NewTaskRunCollector() *TaskRunCollector {
-	labelNames := []string{NS_LABEL}
-	trSchedStatNameEnabled := optionalLabelEnabled(ENABLE_TASKRUN_SCHEDULED_DURATION_TASKNAME_LABEL)
-	if trSchedStatNameEnabled {
-		labelNames = append(labelNames, TASK_NAME_LABEL)
-	}
+func NewTaskRunScheduledMetric() *prometheus.HistogramVec {
+	labelNames := []string{NS_LABEL, TASK_NAME_LABEL}
 	durationScheduled := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "taskrun_duration_scheduled_seconds",
-		Help: "Duration in seconds for a TaskRun to be scheduled.",
+		Help: "Duration in seconds for a TaskRun to be 'scheduled', meaning it has been received by the Tekton controller.  This is an indication of how quickly create events from the API server are arriving to the Tekton controller.",
 		// reminder: exponential buckets need a start value greater than 0
 		// the results in buckets of 0.1, 0.5, 2.5, 12.5, 62.5, 312.5 seconds
 		Buckets: prometheus.ExponentialBuckets(0.1, 5, 6),
 	}, labelNames)
 
-	taskRunCollector := &TaskRunCollector{
-		durationScheduled: durationScheduled,
-		trSchedNameLabel:  trSchedStatNameEnabled,
-	}
 	metrics.Registry.MustRegister(durationScheduled)
 
-	return taskRunCollector
+	return durationScheduled
 
 }
 
-func (c *TaskRunCollector) bumpScheduledDuration(tr *v1beta1.TaskRun, scheduleDuration float64) {
-	labels := map[string]string{NS_LABEL: tr.Namespace}
-	switch {
-	case c.trSchedNameLabel:
-		val := ""
-		if tr.Spec.TaskRef != nil {
-			val = tr.Spec.TaskRef.Name
-		} else {
-			val = tr.Name
-		}
-		labels[TASK_NAME_LABEL] = val
+func NewPodCreateToKubeletDurationMetric() *prometheus.HistogramVec {
+	labelNames := []string{NS_LABEL, TASK_NAME_LABEL}
+	metric := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "taskrun_pod_duration_kubelet_acknowledged_milliseconds",
+		Help:    "Duration in milliseconds between the pod creation time and pod start time, where the pod start time is set once the kubelet has acknowledged the pod, but has not yet pulled its images.",
+		Buckets: prometheus.ExponentialBuckets(float64(100), float64(5), 6),
+	}, labelNames)
+	metrics.Registry.MustRegister(metric)
+	return metric
+}
 
-	}
-	c.durationScheduled.With(labels).Observe(scheduleDuration)
+func NewPodKubeletToContainerStartDurationMetric() *prometheus.HistogramVec {
+	labelNames := []string{NS_LABEL, TASK_NAME_LABEL}
+	metric := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "taskrun_pod_duration_kubelet_to_container_start_milliseconds",
+		Help:    "Duration in milliseconds between the pod start time and the first container to start. This should include any overhead to pull container images, plus any kubelet to linux scheduling overhead.",
+		Buckets: prometheus.ExponentialBuckets(float64(100), float64(5), 6),
+	}, labelNames)
+	metrics.Registry.MustRegister(metric)
+	return metric
 }

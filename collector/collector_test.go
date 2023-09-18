@@ -3,6 +3,8 @@ package collector
 import (
 	"context"
 	"fmt"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"testing"
 	"time"
 
@@ -195,57 +197,6 @@ func TestPipelineRunGapCollection(t *testing.T) {
 }
 
 func TestPipelineRunScheduleCollection(t *testing.T) {
-	objs := []client.Object{}
-	scheme := runtime.NewScheme()
-	_ = v1beta1.AddToScheme(scheme)
-	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
-
-	mockTaskRuns := []*v1beta1.TaskRun{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              "test-taskrun-1",
-				Namespace:         "test-namespace",
-				UID:               types.UID("test-taskrun-1"),
-				CreationTimestamp: metav1.NewTime(time.Now().UTC()),
-			},
-			Status: v1beta1.TaskRunStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 0,
-					Conditions: duckv1.Conditions{{
-						Type:   "Succeeded",
-						Status: corev1.ConditionTrue,
-					}},
-					Annotations: nil,
-				},
-				TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-					StartTime:      &metav1.Time{Time: time.Now().UTC().Add(5 * time.Second)},
-					CompletionTime: &metav1.Time{Time: time.Now().UTC().Add(10 * time.Second)},
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              "test-taskrun-2",
-				Namespace:         "test-namespace",
-				UID:               types.UID("test-taskrun-2"),
-				CreationTimestamp: metav1.NewTime(time.Now().UTC()),
-			},
-			Status: v1beta1.TaskRunStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 0,
-					Conditions: duckv1.Conditions{{
-						Type:   "Succeeded",
-						Status: corev1.ConditionTrue,
-					}},
-					Annotations: nil,
-				},
-				TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-					StartTime:      &metav1.Time{Time: time.Now().UTC().Add(5 * time.Second)},
-					CompletionTime: &metav1.Time{Time: time.Now().UTC().Add(10 * time.Second)},
-				},
-			},
-		},
-	}
 	mockPipelineRuns := []*v1beta1.PipelineRun{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -328,26 +279,14 @@ func TestPipelineRunScheduleCollection(t *testing.T) {
 			},
 		},
 	}
-	schedReconciler := &ReconcilePipelineRunScheduled{client: c, prCollector: NewPipelineRunScheduledCollector()}
-	ctx := context.TODO()
-	for _, tr := range mockTaskRuns {
-		err := c.Create(ctx, tr)
-		assert.NoError(t, err)
-	}
 	for _, pr := range mockPipelineRuns {
-		err := c.Create(ctx, pr)
-		assert.NoError(t, err)
-		request := reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: pr.Namespace,
-				Name:      pr.Name,
-			},
-		}
-		_, err = schedReconciler.Reconcile(ctx, request)
+		metric := NewPipelineRunScheduledMetric()
+		label := prometheus.Labels{NS_LABEL: "test-namespace", PIPELINE_NAME_LABEL: pipelineRunPipelineRef(pr)}
+		bumpPipelineRunScheduledDuration(calculateScheduledDurationPipelineRun(pr), pr, metric)
+		validateHistogramVec(t, metric, label, false)
+		metrics.Registry.Unregister(metric)
 	}
 
-	label := prometheus.Labels{NS_LABEL: "test-namespace"}
-	validateHistogramVec(t, schedReconciler.prCollector.durationScheduled, label, false)
 }
 
 func validateHistogramVec(t *testing.T, h *prometheus.HistogramVec, labels prometheus.Labels, checkMax bool) {
@@ -499,154 +438,55 @@ func TestPipelineRunPipelineRef(t *testing.T) {
 	}
 }
 
-func TestTaskRunTaskRefName(t *testing.T) {
+func TestTaskRef(t *testing.T) {
 	for _, test := range []struct {
 		name           string
 		expectedReturn string
-		tr             *v1beta1.TaskRun
-		pr             *v1beta1.PipelineRun
+		labels         map[string]string
 	}{
 		{
 			name:           "use task run name",
 			expectedReturn: "test-taskrun",
-			tr: &v1beta1.TaskRun{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-taskrun",
-				},
+			labels: map[string]string{
+				pipeline.TaskRunLabelKey: "test-taskrun",
 			},
 		},
 		{
-			name:           "use task run generate name",
-			expectedReturn: "test-taskrun-",
-			tr: &v1beta1.TaskRun{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:         "test-taskrun-foo",
-					GenerateName: "test-taskrun-",
-				},
+			name:           "use cluster task name",
+			expectedReturn: "test-taskrun",
+			labels: map[string]string{
+				pipeline.ClusterTaskLabelKey: "test-taskrun",
+				pipeline.TaskRunLabelKey:     "test-taskrun-foo",
 			},
 		},
 		{
-			name:           "use task run ref param name",
-			expectedReturn: "test-task",
-			tr: &v1beta1.TaskRun{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:         "test-taskrun-foo",
-					GenerateName: "test-taskrun-",
-				},
-				Spec: v1beta1.TaskRunSpec{
-					TaskRef: &v1beta1.TaskRef{
-						ResolverRef: v1beta1.ResolverRef{
-							Params: []v1beta1.Param{
-								{
-									Name: "name",
-									Value: v1beta1.ParamValue{
-										StringVal: "test-task"},
-								},
-							},
-						},
-					},
-				},
+			name:           "use pipeline task name",
+			expectedReturn: "test-taskrun",
+			labels: map[string]string{
+				pipeline.PipelineTaskLabelKey: "test-taskrun",
+				pipeline.ClusterTaskLabelKey:  "test-taskrun-foo",
+				pipeline.TaskRunLabelKey:      "test-taskrun-foo",
 			},
 		},
 		{
-			name:           "use task run ref name",
-			expectedReturn: "test-task",
-			tr: &v1beta1.TaskRun{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:         "test-taskrun-foo",
-					GenerateName: "test-taskrun-",
-				},
-				Spec: v1beta1.TaskRunSpec{TaskRef: &v1beta1.TaskRef{Name: "test-task"}},
-			},
-		},
-		{
-			name:           "use task run ref param name",
-			expectedReturn: "test-task",
-			tr: &v1beta1.TaskRun{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:         "test-taskrun-foo",
-					GenerateName: "test-taskrun-",
-				},
-				Spec: v1beta1.TaskRunSpec{TaskRef: &v1beta1.TaskRef{Name: "test-task"}},
-			},
-		},
-		{
-			name:           "use pipeline run pipeline spec tasks with name",
-			expectedReturn: "task1",
-			pr: &v1beta1.PipelineRun{
-				Spec: v1beta1.PipelineRunSpec{
-					PipelineSpec: &v1beta1.PipelineSpec{
-						Tasks: []v1beta1.PipelineTask{
-							{
-								Name: "task1",
-							},
-						},
-					},
-				},
-			},
-			tr: &v1beta1.TaskRun{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-taskrun-task1",
-				},
-			},
-		},
-		{
-			name:           "use pipeline run pipeline spec tasks with param name",
-			expectedReturn: "task1",
-			pr: &v1beta1.PipelineRun{
-				Spec: v1beta1.PipelineRunSpec{
-					PipelineSpec: &v1beta1.PipelineSpec{
-						Tasks: []v1beta1.PipelineTask{
-							{
-								Params: []v1beta1.Param{
-									{
-										Name:  "name",
-										Value: v1beta1.ParamValue{StringVal: "task1"},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			tr: &v1beta1.TaskRun{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-taskrun-task1",
-				},
-			},
-		},
-		{
-			name:           "use pipeline run spec task run spec",
-			expectedReturn: "task1",
-			pr: &v1beta1.PipelineRun{
-				Spec: v1beta1.PipelineRunSpec{
-					TaskRunSpecs: []v1beta1.PipelineTaskRunSpec{
-						{
-							PipelineTaskName: "task1",
-						},
-					},
-				},
-			},
-			tr: &v1beta1.TaskRun{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-taskrun-task1",
-				},
+			name:           "use task name",
+			expectedReturn: "test-taskrun",
+			labels: map[string]string{
+				pipeline.TaskLabelKey:         "test-taskrun",
+				pipeline.PipelineTaskLabelKey: "test-taskrun-foo",
+				pipeline.ClusterTaskLabelKey:  "test-taskrun-foo",
+				pipeline.TaskRunLabelKey:      "test-taskrun-foo",
 			},
 		},
 	} {
-		ret := taskRunTaskRef(test.tr, test.pr)
+		ret := taskRef(test.labels)
 		if ret != test.expectedReturn {
 			t.Errorf("test %s expected %s got %s", test.name, test.expectedReturn, ret)
 		}
 	}
 }
 
-func TestTaskRunCollection(t *testing.T) {
-	objs := []client.Object{}
-	scheme := runtime.NewScheme()
-	_ = v1beta1.AddToScheme(scheme)
-	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
-
+func TestTaskRunScheduledCollection(t *testing.T) {
 	mockTaskRuns := []*v1beta1.TaskRun{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -682,31 +522,22 @@ func TestTaskRunCollection(t *testing.T) {
 					ObservedGeneration: 0,
 					Conditions: duckv1.Conditions{{
 						Type:   "Succeeded",
-						Status: corev1.ConditionTrue,
+						Status: corev1.ConditionUnknown,
 					}},
 					Annotations: nil,
 				},
 				TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-					StartTime:      &metav1.Time{Time: time.Now().UTC().Add(5 * time.Second)},
-					CompletionTime: &metav1.Time{Time: time.Now().UTC().Add(10 * time.Second)},
+					StartTime: &metav1.Time{Time: time.Now().UTC().Add(5 * time.Second)},
 				},
 			},
 		},
 	}
-	reconciler := &ReconcileTaskRun{client: c, trCollector: NewTaskRunCollector()}
-	ctx := context.TODO()
-	for _, pr := range mockTaskRuns {
-		err := c.Create(ctx, pr)
-		assert.NoError(t, err)
-		request := reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: pr.Namespace,
-				Name:      pr.Name,
-			},
-		}
-		_, err = reconciler.Reconcile(ctx, request)
-	}
 
-	label := prometheus.Labels{NS_LABEL: "test-namespace"}
-	validateHistogramVec(t, reconciler.trCollector.durationScheduled, label, false)
+	for _, tr := range mockTaskRuns {
+		metric := NewTaskRunScheduledMetric()
+		label := prometheus.Labels{NS_LABEL: "test-namespace", TASK_NAME_LABEL: taskRef(tr.Labels)}
+		bumpTaskRunScheduledDuration(calculateScheduledDurationTaskRun(tr), tr, metric)
+		validateHistogramVec(t, metric, label, false)
+		metrics.Registry.Unregister(metric)
+	}
 }

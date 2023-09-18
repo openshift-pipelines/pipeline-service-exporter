@@ -2,8 +2,13 @@ package collector
 
 import (
 	"context"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"time"
 
+	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -12,8 +17,6 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
-
-	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
 var (
@@ -53,6 +56,21 @@ func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
 
 	var mgr ctrl.Manager
 	var err error
+	var labelReq *labels.Requirement
+	// only get/watch/cache pods with the tekton pipeline label
+	labelReq, err = labels.NewRequirement(pipeline.PipelineLabelKey, selection.Exists, []string{})
+	if err != nil {
+		return nil, err
+	}
+	podSelector := labels.NewSelector().Add(*labelReq)
+	selectors := cache.SelectorsByObject{
+		&corev1.Pod{}: cache.ObjectSelector{
+			Label: podSelector,
+		},
+	}
+	cacheOptions := cache.Options{SelectorsByObject: selectors}
+	options.NewCache = cache.BuilderWithOptions(cacheOptions)
+
 	mgr, err = ctrl.NewManager(cfg, options)
 	if err != nil {
 		return nil, err
@@ -68,7 +86,7 @@ func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
 		return nil, err
 	}
 
-	err = SetupTaskRunController(mgr)
+	err = SetupTaskRunScheduleDurationController(mgr)
 	if err != nil {
 		return nil, err
 	}
@@ -78,5 +96,14 @@ func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
 		return nil, err
 	}
 
+	err = SetupPodCreateToKubeletDurationController(mgr)
+	if err != nil {
+		return nil, err
+	}
+
+	err = SetupPodKubeletToContainerStartDurationController(mgr)
+	if err != nil {
+		return nil, err
+	}
 	return mgr, nil
 }

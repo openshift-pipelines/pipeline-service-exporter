@@ -26,117 +26,296 @@ import (
 )
 
 func TestCalculatePipelineRunScheduledDuration(t *testing.T) {
-	// Create mock PipelineRuns data
-	mockPipelineRuns := []*v1beta1.PipelineRun{
+	now := time.Now()
+	for _, tc := range []struct {
+		expectedAmt float64
+		pr          *v1beta1.PipelineRun
+	}{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              "test-pipelinerun-1",
-				Namespace:         "test-namespace",
-				CreationTimestamp: metav1.NewTime(time.Now().UTC()),
-			},
-			Status: v1beta1.PipelineRunStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 0,
-					Conditions: duckv1.Conditions{{
-						Type:   "Succeeded",
-						Status: corev1.ConditionTrue,
-					}},
-					Annotations: nil,
+			expectedAmt: 5,
+			pr: &v1beta1.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-pipelinerun-1",
+					Namespace:         "test-namespace",
+					CreationTimestamp: metav1.NewTime(now),
 				},
-				PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
-					StartTime:      &metav1.Time{Time: time.Now().UTC().Add(5 * time.Second)},
-					CompletionTime: &metav1.Time{Time: time.Now().UTC().Add(10 * time.Second)},
+				Status: v1beta1.PipelineRunStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 0,
+						Conditions: duckv1.Conditions{{
+							Type:   "Succeeded",
+							Status: corev1.ConditionTrue,
+						}},
+						Annotations: nil,
+					},
+					PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
+						StartTime:      &metav1.Time{Time: now.Add(5 * time.Second)},
+						CompletionTime: &metav1.Time{Time: now.Add(10 * time.Second)},
+					},
 				},
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              "test-pipelinerun-1",
-				Namespace:         "test-namespace",
-				CreationTimestamp: metav1.NewTime(time.Now().UTC()),
-			},
-			Status: v1beta1.PipelineRunStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 0,
-					Conditions: duckv1.Conditions{{
-						Type:   "Failed",
-						Status: corev1.ConditionTrue,
-					}},
-					Annotations: nil,
+			expectedAmt: 5,
+			pr: &v1beta1.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-pipelinerun-1",
+					Namespace:         "test-namespace",
+					CreationTimestamp: metav1.NewTime(now),
 				},
-				PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
-					StartTime:      &metav1.Time{Time: time.Now().UTC().Add(5 * time.Second)},
-					CompletionTime: &metav1.Time{Time: time.Now().UTC().Add(10 * time.Second)},
+				Status: v1beta1.PipelineRunStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 0,
+						Conditions: duckv1.Conditions{{
+							Type:   "Failed",
+							Status: corev1.ConditionTrue,
+						}},
+						Annotations: nil,
+					},
+					PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
+						StartTime:      &metav1.Time{Time: now.Add(5 * time.Second)},
+						CompletionTime: &metav1.Time{Time: now.Add(10 * time.Second)},
+					},
 				},
 			},
 		},
-	}
-
-	for _, pr := range mockPipelineRuns {
-		want := 5
-		got := int(calculateScheduledDurationPipelineRun(pr))
-
-		if got != want {
-			t.Errorf("Scheduled Duration is not as expected. Got %d, expected %d", got, want)
+	} {
+		got := calculateScheduledDurationPipelineRun(tc.pr)
+		if got != tc.expectedAmt {
+			t.Errorf("Scheduled Duration is not as expected. Got %v, expected %v", got, tc.expectedAmt)
 		}
 	}
-
 }
 
 func TestCalculateTaskRunScheduledDuration(t *testing.T) {
-	// Create mock TaskRuns data
-	mockTaskRuns := []*v1beta1.TaskRun{
+	now := time.Now()
+	for _, tc := range []struct {
+		expectedAmt float64
+		tr          *v1beta1.TaskRun
+	}{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              "test-taskrun-1",
-				Namespace:         "test-namespace",
-				CreationTimestamp: metav1.NewTime(time.Now().UTC()),
-			},
-			Status: v1beta1.TaskRunStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 0,
-					Conditions: duckv1.Conditions{{
-						Type:   "Succeeded",
-						Status: corev1.ConditionTrue,
-					}},
-					Annotations: nil,
+			expectedAmt: 5,
+			tr: &v1beta1.TaskRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-taskrun-1",
+					Namespace:         "test-namespace",
+					CreationTimestamp: metav1.NewTime(now),
 				},
-				TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-					StartTime:      &metav1.Time{Time: time.Now().UTC().Add(5 * time.Second)},
-					CompletionTime: &metav1.Time{Time: time.Now().UTC().Add(10 * time.Second)},
+				Status: v1beta1.TaskRunStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 0,
+						Conditions: duckv1.Conditions{{
+							Type:   "Succeeded",
+							Status: corev1.ConditionTrue,
+						}},
+						Annotations: nil,
+					},
+					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
+						StartTime:      &metav1.Time{Time: now.Add(5 * time.Second)},
+						CompletionTime: &metav1.Time{Time: now.Add(10 * time.Second)},
+					},
 				},
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              "test-taskrun-1",
-				Namespace:         "test-namespace",
-				CreationTimestamp: metav1.NewTime(time.Now().UTC()),
-			},
-			Status: v1beta1.TaskRunStatus{
-				Status: duckv1.Status{
-					ObservedGeneration: 0,
-					Conditions: duckv1.Conditions{{
-						Type:   "Failed",
-						Status: corev1.ConditionTrue,
-					}},
-					Annotations: nil,
+			expectedAmt: 5,
+			tr: &v1beta1.TaskRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-taskrun-1",
+					Namespace:         "test-namespace",
+					CreationTimestamp: metav1.NewTime(now),
 				},
-				TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-					StartTime:      &metav1.Time{Time: time.Now().UTC().Add(5 * time.Second)},
-					CompletionTime: &metav1.Time{Time: time.Now().UTC().Add(10 * time.Second)},
+				Status: v1beta1.TaskRunStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 0,
+						Conditions: duckv1.Conditions{{
+							Type:   "Failed",
+							Status: corev1.ConditionTrue,
+						}},
+						Annotations: nil,
+					},
+					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
+						StartTime:      &metav1.Time{Time: now.Add(5 * time.Second)},
+						CompletionTime: &metav1.Time{Time: now.Add(10 * time.Second)},
+					},
 				},
 			},
 		},
-	}
-
-	for _, tr := range mockTaskRuns {
-		want := 5
-		got := int(calculateScheduledDurationTaskRun(tr))
-
-		if got != want {
-			t.Errorf("Scheduled Duration is not as expected. Got %d, expected %d", got, want)
+	} {
+		got := calculateScheduledDurationTaskRun(tc.tr)
+		if got != tc.expectedAmt {
+			t.Errorf("Scheduled Duration is not as expected. Got %v, expected %v", got, tc.expectedAmt)
 		}
 	}
+}
 
+func TestCalculateTaskRunPodStartedToFirstContainerStartedDuration(t *testing.T) {
+	now := time.Now()
+	for _, tc := range []struct {
+		expectedAmt float64
+		pod         *corev1.Pod
+	}{
+		{
+			expectedAmt: 0,
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-taskrun-1",
+					Namespace:         "test-namespace",
+					CreationTimestamp: metav1.NewTime(now),
+				},
+			},
+		},
+		{
+			expectedAmt: 0,
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-taskrun-1",
+					Namespace:         "test-namespace",
+					CreationTimestamp: metav1.NewTime(now),
+				},
+				Status: corev1.PodStatus{StartTime: &metav1.Time{Time: now.Add(3 * time.Second)}},
+			},
+		},
+		{
+			expectedAmt: 0,
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-taskrun-1",
+					Namespace:         "test-namespace",
+					CreationTimestamp: metav1.NewTime(now),
+				},
+				Status: corev1.PodStatus{StartTime: &metav1.Time{Time: now.Add(3 * time.Second)}},
+			},
+		},
+		{
+			expectedAmt: 2000,
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-taskrun-1",
+					Namespace:         "test-namespace",
+					CreationTimestamp: metav1.NewTime(now),
+				},
+				Status: corev1.PodStatus{
+					StartTime: &metav1.Time{Time: now.Add(3 * time.Second)},
+					ContainerStatuses: []corev1.ContainerStatus{
+						{
+							State: corev1.ContainerState{
+								Running: &corev1.ContainerStateRunning{StartedAt: metav1.Time{Time: now.Add(5 * time.Second)}},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			expectedAmt: 2000,
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-taskrun-1",
+					Namespace:         "test-namespace",
+					CreationTimestamp: metav1.NewTime(now),
+				},
+				Status: corev1.PodStatus{
+					StartTime: &metav1.Time{Time: now.Add(3 * time.Second)},
+					ContainerStatuses: []corev1.ContainerStatus{
+						{
+							State: corev1.ContainerState{
+								Terminated: &corev1.ContainerStateTerminated{StartedAt: metav1.Time{Time: now.Add(5 * time.Second)}},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			expectedAmt: 2000,
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-taskrun-1",
+					Namespace:         "test-namespace",
+					CreationTimestamp: metav1.NewTime(now),
+				},
+				Status: corev1.PodStatus{
+					StartTime: &metav1.Time{Time: now.Add(3 * time.Second)},
+					ContainerStatuses: []corev1.ContainerStatus{
+						{
+							State: corev1.ContainerState{
+								Running: &corev1.ContainerStateRunning{StartedAt: metav1.Time{Time: now.Add(6 * time.Second)}},
+							},
+						},
+						{
+							State: corev1.ContainerState{
+								Terminated: &corev1.ContainerStateTerminated{StartedAt: metav1.Time{Time: now.Add(5 * time.Second)}},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			expectedAmt: 2000,
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-taskrun-1",
+					Namespace:         "test-namespace",
+					CreationTimestamp: metav1.NewTime(now),
+				},
+				Status: corev1.PodStatus{
+					StartTime: &metav1.Time{Time: now.Add(3 * time.Second)},
+					ContainerStatuses: []corev1.ContainerStatus{
+						{
+							State: corev1.ContainerState{
+								Running: &corev1.ContainerStateRunning{StartedAt: metav1.Time{Time: now.Add(5 * time.Second)}},
+							},
+						},
+						{
+							State: corev1.ContainerState{
+								Terminated: &corev1.ContainerStateTerminated{StartedAt: metav1.Time{Time: now.Add(6 * time.Second)}},
+							},
+						},
+					},
+				},
+			},
+		},
+	} {
+		got := calculateTaskRunPodStartedToFirstContainerStartedDuration(tc.pod)
+		if got != tc.expectedAmt {
+			t.Errorf("expected %v but got %v", tc.expectedAmt, got)
+		}
+	}
+}
+
+func TestCalculateTaskRunPodCreatedToKubeletAcceptsAndStartTimeSetDuration(t *testing.T) {
+	now := time.Now()
+	for _, tc := range []struct {
+		expectedAmt float64
+		pod         *corev1.Pod
+	}{
+		{
+			expectedAmt: 3000,
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-taskrun-1",
+					Namespace:         "test-namespace",
+					CreationTimestamp: metav1.NewTime(now),
+				},
+				Status: corev1.PodStatus{StartTime: &metav1.Time{Time: now.Add(3 * time.Second)}},
+			},
+		},
+		{
+			expectedAmt: 0,
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "test-taskrun-1",
+					Namespace:         "test-namespace",
+					CreationTimestamp: metav1.NewTime(now),
+				},
+			},
+		},
+	} {
+		got := calculateTaskRunPodCreatedToKubeletAcceptsAndStartTimeSetDuration(tc.pod)
+		if got != tc.expectedAmt {
+			t.Errorf("expected %v but got %v", tc.expectedAmt, got)
+		}
+	}
 }
