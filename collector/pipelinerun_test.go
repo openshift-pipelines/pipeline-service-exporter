@@ -158,8 +158,10 @@ func TestResetPVCStats(t *testing.T) {
 	validateGaugeVec(t, pvcReconciler.prCollector.pvcThrottle, label, float64(1))
 }
 
-func TestStartTimeEventFilter_Update(t *testing.T) {
-	filter := &startTimeEventFilter{}
+func TestPipelineRunStartTimeEventFilter_Update(t *testing.T) {
+	filter := &startTimeEventFilter{
+		metric: NewPipelineRunScheduledMetric(),
+	}
 	for _, tc := range []struct {
 		name       string
 		oldPR      *v1beta1.PipelineRun
@@ -179,7 +181,6 @@ func TestStartTimeEventFilter_Update(t *testing.T) {
 					PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{StartTime: &metav1.Time{}},
 				},
 			},
-			expectedRC: true,
 		},
 		{
 			name: "udpate after started",
