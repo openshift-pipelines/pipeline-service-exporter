@@ -81,6 +81,13 @@ func (f *podCreateToCompleteFilter) Update(e event.UpdateEvent) bool {
 		// if first transition when old pod still had non-terminated containers, but the new pod does not, process
 		if oldTerminatedState == nil && newTerminatedState != nil {
 			labels := map[string]string{NS_LABEL: newpod.Namespace, PIPELINE_NAME_LABEL: pipelineRef(newpod.Labels), TASK_NAME_LABEL: taskRef(newpod.Labels)}
+			// we've seen in staging, especially with errors and short durations, and corroborated by comments I see in tekton,
+			// where it is conceivable node times are not synchronized, when controller has been scheduled to other nodes than the pods, weird timestamps, etc.
+			// so we check
+			if newTerminatedState.FinishedAt.Time.Before(newpod.CreationTimestamp.Time) {
+				f.duration.With(labels).Observe(float64(0))
+				return false
+			}
 			f.duration.With(labels).Observe(newTerminatedState.FinishedAt.Time.Sub(newpod.CreationTimestamp.Time).Seconds())
 		}
 	}
