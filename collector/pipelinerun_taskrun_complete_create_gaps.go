@@ -1,159 +1,38 @@
-/*
- Copyright 2023 The Pipeline Service Authors.
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-*/
-
 package collector
 
 import (
 	"context"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sort"
-	"strings"
 	"time"
 )
 
-const (
-	ENABLE_GAP_METRIC_ADDITIONAL_LABELS = "ENABLE_GAP_METRIC_ADDITIONAL_LABELS"
-	NS_LABEL                            = "namespace"
-	PIPELINE_NAME_LABEL                 = "pipelinename"
-	TASK_NAME_LABEL                     = "taskname"
-	COMPLETED_LABEL                     = "completed"
-	UPCOMING_LABEL                      = "upcoming"
-	STATUS_LABEL                        = "status"
-	SUCCEEDED                           = "succeded"
-	FAILED                              = "failed"
-)
-
-type PipelineRunScheduledCollector struct {
-	durationScheduled *prometheus.HistogramVec
-	prSchedNameLabel  bool
+func SetupPipelineRunTaskRunGapController(mgr ctrl.Manager) error {
+	reconciler := &ReconcilePipelineRunTaskRunGap{
+		client:        mgr.GetClient(),
+		scheme:        mgr.GetScheme(),
+		eventRecorder: mgr.GetEventRecorderFor("MetricExporterPipelineRunsTaskRunGap"),
+		prCollector:   NewPipelineRunTaskRunGapCollector(),
+	}
+	return ctrl.NewControllerManagedBy(mgr).For(&v1beta1.PipelineRun{}).WithEventFilter(&taskRunGapEventFilter{}).Complete(reconciler)
 }
 
 type PipelineRunTaskRunGapCollector struct {
 	trGaps           *prometheus.HistogramVec
 	additionalLabels bool
-}
-
-type ThrottledByPVCQuotaCollector struct {
-	pvcThrottle *prometheus.GaugeVec
-}
-
-type TaskRunScheduledCollector struct {
-	durationScheduled *prometheus.HistogramVec
-	trSchedNameLabel  bool
-}
-
-type TaskRunRunningCollector struct {
-	durationRunning *prometheus.HistogramVec
-}
-
-func pipelineRunPipelineRef(pr *v1beta1.PipelineRun) string {
-	val := ""
-	ref := pr.Spec.PipelineRef
-	if ref != nil {
-		val = ref.Name
-		if len(val) == 0 {
-			for _, p := range ref.Params {
-				if strings.TrimSpace(p.Name) == "name" {
-					return p.Value.StringVal
-				}
-			}
-		}
-	} else {
-		if len(pr.GenerateName) > 0 {
-			return pr.GenerateName
-		}
-		// at this point, the pipelinerun name should not have any random aspects, and is
-		// essentially a constant, with a minimal cardinality impact
-		val = pr.Name
-	}
-	return val
-}
-
-func taskRef(labels map[string]string) string {
-	task, _ := labels[pipeline.TaskLabelKey]
-	pipelineTask, _ := labels[pipeline.PipelineTaskLabelKey]
-	clusterTask, _ := labels[pipeline.ClusterTaskLabelKey]
-	taskRun, _ := labels[pipeline.TaskRunLabelKey]
-	switch {
-	case len(task) > 0:
-		return task
-	case len(pipelineTask) > 0:
-		return pipelineTask
-	case len(clusterTask) > 0:
-		return clusterTask
-	case len(taskRun) > 0:
-		return taskRun
-	}
-	return ""
-}
-
-func bumpTaskRunScheduledDuration(scheduleDuration float64, tr *v1beta1.TaskRun, metric *prometheus.HistogramVec) {
-	labels := map[string]string{NS_LABEL: tr.Namespace, TASK_NAME_LABEL: taskRef(tr.Labels)}
-	metric.With(labels).Observe(scheduleDuration)
-}
-
-func NewPipelineRunScheduledMetric() *prometheus.HistogramVec {
-	labelNames := []string{NS_LABEL, PIPELINE_NAME_LABEL}
-	durationScheduled := prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "pipelinerun_duration_scheduled_seconds",
-		Help: "Duration in seconds for a PipelineRun to be 'scheduled', meaning it has been received by the Tekton controller.  This is an indication of how quickly create events from the API server are arriving to the Tekton controller.",
-		// reminder: exponential buckets need a start value greater than 0
-		// the results in buckets of 0.1, 0.5, 2.5, 12.5, 62.5, 312.5 seconds
-		Buckets: prometheus.ExponentialBuckets(0.1, 5, 6),
-	}, labelNames)
-
-	metrics.Registry.MustRegister(durationScheduled)
-
-	return durationScheduled
-}
-
-func bumpPipelineRunScheduledDuration(scheduleDuration float64, pr *v1beta1.PipelineRun, metric *prometheus.HistogramVec) {
-	labels := map[string]string{NS_LABEL: pr.Namespace, PIPELINE_NAME_LABEL: pipelineRunPipelineRef(pr)}
-	metric.With(labels).Observe(scheduleDuration)
-}
-
-func NewPVCThrottledCollector() *ThrottledByPVCQuotaCollector {
-	labelNames := []string{NS_LABEL}
-	pvcThrottled := prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "pipelinerun_failed_by_pvc_quota_count",
-		Help: "Number of PipelineRuns who were marked failed because PVC Resource Quotas prevented the creation of required PVCs",
-	}, labelNames)
-	pvcThrottledCollector := &ThrottledByPVCQuotaCollector{
-		pvcThrottle: pvcThrottled,
-	}
-	metrics.Registry.MustRegister(pvcThrottled)
-	return pvcThrottledCollector
-}
-
-func (c *ThrottledByPVCQuotaCollector) incPVCThrottle(pr *v1beta1.PipelineRun) {
-	labels := map[string]string{NS_LABEL: pr.Namespace}
-	c.pvcThrottle.With(labels).Inc()
-}
-
-func (c *ThrottledByPVCQuotaCollector) zeroPVCThrottle(ns string) {
-	labels := map[string]string{NS_LABEL: ns}
-	c.pvcThrottle.With(labels).Set(float64(0))
 }
 
 func NewPipelineRunTaskRunGapCollector() *PipelineRunTaskRunGapCollector {
@@ -177,6 +56,68 @@ func NewPipelineRunTaskRunGapCollector() *PipelineRunTaskRunGapCollector {
 	metrics.Registry.MustRegister(trGaps)
 
 	return pipelineRunTaskRunGapCollector
+}
+
+type ReconcilePipelineRunTaskRunGap struct {
+	client        client.Client
+	scheme        *runtime.Scheme
+	eventRecorder record.EventRecorder
+	prCollector   *PipelineRunTaskRunGapCollector
+}
+
+type taskRunGapEventFilter struct {
+}
+
+func (f *taskRunGapEventFilter) Create(event.CreateEvent) bool {
+	return false
+}
+
+func (f *taskRunGapEventFilter) Delete(event.DeleteEvent) bool {
+	return false
+}
+
+func (f *taskRunGapEventFilter) Update(e event.UpdateEvent) bool {
+
+	//TODO remember, keep track of when pipeline-service and RHTAP starts moving from v1beta1 to v1
+	oldPR, okold := e.ObjectOld.(*v1beta1.PipelineRun)
+	newPR, oknew := e.ObjectNew.(*v1beta1.PipelineRun)
+	// the real-time filtering involes retrieving the taskruns that are childs of this pipelinerun, so we only
+	// calculate when the pipelinerun transtions to done, and then compare the kinds; note - do not need to check for cancel,
+	// as eventually those PRs will be marked done once any running TRs are done
+	if okold && oknew {
+		// NOTE: confirmed that the succeeded condition is marked done and the completion timestamp is set at the same time
+		if !oldPR.IsDone() && newPR.IsDone() {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *taskRunGapEventFilter) Generic(event.GenericEvent) bool {
+	return false
+}
+
+func (r *ReconcilePipelineRunTaskRunGap) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithCancel(ctx)
+	defer cancel()
+	log := log.FromContext(ctx)
+
+	//TODO remember, keep track of when pipeline-service and RHTAP starts moving from v1beta1 to v1
+	pr := &v1beta1.PipelineRun{}
+	err := r.client.Get(ctx, types.NamespacedName{Namespace: request.Namespace, Name: request.Name}, pr)
+	if err != nil && !errors.IsNotFound(err) {
+		return reconcile.Result{}, err
+	}
+	if err != nil {
+		log.V(4).Info(fmt.Sprintf("ignoring deleted pipelinerun %q", request.NamespacedName))
+		return reconcile.Result{}, nil
+	}
+
+	// based on our WithEventFilter we should only be getting called with the start time is set
+	log.V(4).Info(fmt.Sprintf("recording taskrun gap for %q", request.NamespacedName))
+	r.prCollector.bumpGapDuration(pr, r.client, ctx)
+	return reconcile.Result{}, nil
 }
 
 func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun, oc client.Client, ctx context.Context) {
@@ -306,42 +247,4 @@ func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun
 	}
 
 	return
-}
-
-func NewTaskRunScheduledMetric() *prometheus.HistogramVec {
-	labelNames := []string{NS_LABEL, TASK_NAME_LABEL}
-	durationScheduled := prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "taskrun_duration_scheduled_seconds",
-		Help: "Duration in seconds for a TaskRun to be 'scheduled', meaning it has been received by the Tekton controller.  This is an indication of how quickly create events from the API server are arriving to the Tekton controller.",
-		// reminder: exponential buckets need a start value greater than 0
-		// the results in buckets of 0.1, 0.5, 2.5, 12.5, 62.5, 312.5 seconds
-		Buckets: prometheus.ExponentialBuckets(0.1, 5, 6),
-	}, labelNames)
-
-	metrics.Registry.MustRegister(durationScheduled)
-
-	return durationScheduled
-
-}
-
-func NewPodCreateToKubeletDurationMetric() *prometheus.HistogramVec {
-	labelNames := []string{NS_LABEL, TASK_NAME_LABEL}
-	metric := prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "taskrun_pod_duration_kubelet_acknowledged_milliseconds",
-		Help:    "Duration in milliseconds between the pod creation time and pod start time, where the pod start time is set once the kubelet has acknowledged the pod, but has not yet pulled its images.",
-		Buckets: prometheus.ExponentialBuckets(float64(100), float64(5), 6),
-	}, labelNames)
-	metrics.Registry.MustRegister(metric)
-	return metric
-}
-
-func NewPodKubeletToContainerStartDurationMetric() *prometheus.HistogramVec {
-	labelNames := []string{NS_LABEL, TASK_NAME_LABEL}
-	metric := prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "taskrun_pod_duration_kubelet_to_container_start_milliseconds",
-		Help:    "Duration in milliseconds between the pod start time and the first container to start. This should include any overhead to pull container images, plus any kubelet to linux scheduling overhead.",
-		Buckets: prometheus.ExponentialBuckets(float64(100), float64(5), 6),
-	}, labelNames)
-	metrics.Registry.MustRegister(metric)
-	return metric
 }
