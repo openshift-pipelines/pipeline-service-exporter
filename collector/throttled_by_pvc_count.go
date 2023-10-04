@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"github.com/tektoncd/pipeline/pkg/reconciler/volumeclaim"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,7 +31,7 @@ func SetupPVCThrottledController(mgr ctrl.Manager) error {
 		nsCache:       map[string]struct{}{},
 		listMutex:     sync.RWMutex{},
 	}
-	err := ctrl.NewControllerManagedBy(mgr).For(&v1beta1.PipelineRun{}).WithEventFilter(&pvcThrottledFilter{}).Complete(reconciler)
+	err := ctrl.NewControllerManagedBy(mgr).For(&v1.PipelineRun{}).WithEventFilter(&pvcThrottledFilter{}).Complete(reconciler)
 	if err == nil {
 		mgr.Add(reconciler)
 	}
@@ -61,8 +61,7 @@ func (r *ReconcilePVCThrottled) Reconcile(ctx context.Context, request reconcile
 	r.listMutex.RLock()
 	defer r.listMutex.RUnlock()
 
-	//TODO remember, keep track of when pipeline-service and RHTAP starts moving from v1beta1 to v1
-	pr := &v1beta1.PipelineRun{}
+	pr := &v1.PipelineRun{}
 	err := r.client.Get(ctx, types.NamespacedName{Namespace: request.Namespace, Name: request.Name}, pr)
 	if err != nil && !errors.IsNotFound(err) {
 		return reconcile.Result{}, err
@@ -101,7 +100,7 @@ func (r *ReconcilePVCThrottled) Start(ctx context.Context) error {
 	return nil
 }
 
-func failedBecauseOfPVCQuota(pr *v1beta1.PipelineRun) bool {
+func failedBecauseOfPVCQuota(pr *v1.PipelineRun) bool {
 	c := pr.GetStatusCondition().GetCondition(apis.ConditionSucceeded)
 	if c == nil {
 		return false
@@ -123,7 +122,7 @@ func (r *ReconcilePVCThrottled) resetPVCStats(ctx context.Context) {
 	for ns := range r.nsCache {
 		r.prCollector.zeroPVCThrottle(ns)
 	}
-	prList := &v1beta1.PipelineRunList{}
+	prList := &v1.PipelineRunList{}
 	err := r.client.List(ctx, prList)
 	nsWithPVCThrottle := map[string]struct{}{}
 	if err == nil {
@@ -160,9 +159,8 @@ func (f *pvcThrottledFilter) Delete(e event.DeleteEvent) bool {
 
 func (f *pvcThrottledFilter) Update(e event.UpdateEvent) bool {
 
-	//TODO remember, keep track of when pipeline-service and RHTAP starts moving from v1beta1 to v1
-	oldPR, okold := e.ObjectOld.(*v1beta1.PipelineRun)
-	newPR, oknew := e.ObjectNew.(*v1beta1.PipelineRun)
+	oldPR, okold := e.ObjectOld.(*v1.PipelineRun)
+	newPR, oknew := e.ObjectNew.(*v1.PipelineRun)
 	if okold && oknew {
 		if !failedBecauseOfPVCQuota(oldPR) && failedBecauseOfPVCQuota(newPR) {
 			return true
@@ -188,7 +186,7 @@ func NewPVCThrottledCollector() *ThrottledByPVCQuotaCollector {
 	return pvcThrottledCollector
 }
 
-func (c *ThrottledByPVCQuotaCollector) incPVCThrottle(pr *v1beta1.PipelineRun) {
+func (c *ThrottledByPVCQuotaCollector) incPVCThrottle(pr *v1.PipelineRun) {
 	labels := map[string]string{NS_LABEL: pr.Namespace}
 	c.pvcThrottle.With(labels).Inc()
 }

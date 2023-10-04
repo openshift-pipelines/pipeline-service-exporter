@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -27,7 +27,7 @@ func SetupPipelineRunTaskRunGapController(mgr ctrl.Manager) error {
 		eventRecorder: mgr.GetEventRecorderFor("MetricExporterPipelineRunsTaskRunGap"),
 		prCollector:   NewPipelineRunTaskRunGapCollector(),
 	}
-	return ctrl.NewControllerManagedBy(mgr).For(&v1beta1.PipelineRun{}).WithEventFilter(&taskRunGapEventFilter{}).Complete(reconciler)
+	return ctrl.NewControllerManagedBy(mgr).For(&v1.PipelineRun{}).WithEventFilter(&taskRunGapEventFilter{}).Complete(reconciler)
 }
 
 type PipelineRunTaskRunGapCollector struct {
@@ -78,9 +78,8 @@ func (f *taskRunGapEventFilter) Delete(event.DeleteEvent) bool {
 
 func (f *taskRunGapEventFilter) Update(e event.UpdateEvent) bool {
 
-	//TODO remember, keep track of when pipeline-service and RHTAP starts moving from v1beta1 to v1
-	oldPR, okold := e.ObjectOld.(*v1beta1.PipelineRun)
-	newPR, oknew := e.ObjectNew.(*v1beta1.PipelineRun)
+	oldPR, okold := e.ObjectOld.(*v1.PipelineRun)
+	newPR, oknew := e.ObjectNew.(*v1.PipelineRun)
 	// the real-time filtering involes retrieving the taskruns that are childs of this pipelinerun, so we only
 	// calculate when the pipelinerun transtions to done, and then compare the kinds; note - do not need to check for cancel,
 	// as eventually those PRs will be marked done once any running TRs are done
@@ -103,8 +102,7 @@ func (r *ReconcilePipelineRunTaskRunGap) Reconcile(ctx context.Context, request 
 	defer cancel()
 	log := log.FromContext(ctx)
 
-	//TODO remember, keep track of when pipeline-service and RHTAP starts moving from v1beta1 to v1
-	pr := &v1beta1.PipelineRun{}
+	pr := &v1.PipelineRun{}
 	err := r.client.Get(ctx, types.NamespacedName{Namespace: request.Namespace, Name: request.Name}, pr)
 	if err != nil && !errors.IsNotFound(err) {
 		return reconcile.Result{}, err
@@ -120,7 +118,7 @@ func (r *ReconcilePipelineRunTaskRunGap) Reconcile(ctx context.Context, request 
 	return reconcile.Result{}, nil
 }
 
-func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun, oc client.Client, ctx context.Context) {
+func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1.PipelineRun, oc client.Client, ctx context.Context) {
 	if len(pr.Status.ChildReferences) < 1 {
 		return
 	}
@@ -130,8 +128,8 @@ func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun
 		return
 	}
 
-	sortedTaskRunsByCreateTimes := []*v1beta1.TaskRun{}
-	reverseOrderSortedTaskRunsByCompletionTimes := []*v1beta1.TaskRun{}
+	sortedTaskRunsByCreateTimes := []*v1.TaskRun{}
+	reverseOrderSortedTaskRunsByCompletionTimes := []*v1.TaskRun{}
 	// prior testing in staging proved that with enough concurrency, this array is minimally not sorted based on when
 	// the task runs were created, so we explicitly sort for that; also, this sorting will allow us to effectively
 	// address parallel taskruns vs. taskrun dependencies and ordering (where tekton does not create a taskrun until its dependencies
@@ -140,7 +138,7 @@ func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun
 		if kidRef.Kind != "TaskRun" {
 			continue
 		}
-		kid := &v1beta1.TaskRun{}
+		kid := &v1.TaskRun{}
 		err := oc.Get(ctx, types.NamespacedName{Namespace: pr.Namespace, Name: kidRef.Name}, kid)
 		if err != nil {
 			ctrl.Log.Info(fmt.Sprintf("could not calculate gap for taskrun %s:%s: %s", pr.Namespace, kidRef.Name, err.Error()))
@@ -216,7 +214,7 @@ func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1beta1.PipelineRun
 
 		// get whatever completed first
 		timeToCalculateWith := time.Time{}
-		trToCalculateWith := &v1beta1.TaskRun{}
+		trToCalculateWith := &v1.TaskRun{}
 		if len(reverseOrderSortedTaskRunsByCompletionTimes) > 0 {
 			trToCalculateWith = reverseOrderSortedTaskRunsByCompletionTimes[len(reverseOrderSortedTaskRunsByCompletionTimes)-1]
 			timeToCalculateWith = trToCalculateWith.Status.CompletionTime.Time

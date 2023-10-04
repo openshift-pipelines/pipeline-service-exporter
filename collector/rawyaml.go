@@ -1,5 +1,10 @@
 package collector
 
+/*
+For now at least, we are keeping these as v1beta1 to have some element of regression testing, now that we've flipped
+the "default" to v1.
+*/
+
 const prYaml = `
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun

@@ -5,7 +5,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
@@ -20,21 +20,21 @@ func TestTaskRefWaitTimeFilter_Update(t *testing.T) {
 	now := time.Now()
 	for _, tc := range []struct {
 		name                  string
-		oldTR                 *v1beta1.TaskRun
-		newTR                 *v1beta1.TaskRun
+		oldTR                 *v1.TaskRun
+		newTR                 *v1.TaskRun
 		expectedRC            bool
 		expectedNonZeroMetric bool
 	}{
 		{
 			name:  "not started",
-			oldTR: &v1beta1.TaskRun{},
-			newTR: &v1beta1.TaskRun{},
+			oldTR: &v1.TaskRun{},
+			newTR: &v1.TaskRun{},
 		},
 		{
 			name:  "done",
-			oldTR: &v1beta1.TaskRun{},
-			newTR: &v1beta1.TaskRun{
-				Status: v1beta1.TaskRunStatus{
+			oldTR: &v1.TaskRun{},
+			newTR: &v1.TaskRun{
+				Status: v1.TaskRunStatus{
 					Status: duckv1.Status{Conditions: duckv1.Conditions{
 						{
 							Type:   apis.ConditionSucceeded,
@@ -46,25 +46,25 @@ func TestTaskRefWaitTimeFilter_Update(t *testing.T) {
 		},
 		{
 			name: "both running, same transition time",
-			oldTR: &v1beta1.TaskRun{
-				Status: v1beta1.TaskRunStatus{
+			oldTR: &v1.TaskRun{
+				Status: v1.TaskRunStatus{
 					Status: duckv1.Status{Conditions: duckv1.Conditions{
 						{
 							Type:               apis.ConditionSucceeded,
 							Status:             corev1.ConditionUnknown,
-							Reason:             v1beta1.TaskRunReasonResolvingTaskRef,
+							Reason:             v1.TaskRunReasonResolvingTaskRef,
 							LastTransitionTime: apis.VolatileTime{Inner: metav1.NewTime(now)},
 						},
 					}},
 				},
 			},
-			newTR: &v1beta1.TaskRun{
-				Status: v1beta1.TaskRunStatus{
+			newTR: &v1.TaskRun{
+				Status: v1.TaskRunStatus{
 					Status: duckv1.Status{Conditions: duckv1.Conditions{
 						{
 							Type:               apis.ConditionSucceeded,
 							Status:             corev1.ConditionUnknown,
-							Reason:             v1beta1.TaskRunReasonResolvingTaskRef,
+							Reason:             v1.TaskRunReasonResolvingTaskRef,
 							LastTransitionTime: apis.VolatileTime{Inner: metav1.NewTime(now)},
 						},
 					}},
@@ -73,25 +73,25 @@ func TestTaskRefWaitTimeFilter_Update(t *testing.T) {
 		},
 		{
 			name: "both running, diff transition time",
-			oldTR: &v1beta1.TaskRun{
-				Status: v1beta1.TaskRunStatus{
+			oldTR: &v1.TaskRun{
+				Status: v1.TaskRunStatus{
 					Status: duckv1.Status{Conditions: duckv1.Conditions{
 						{
 							Type:               apis.ConditionSucceeded,
 							Status:             corev1.ConditionUnknown,
-							Reason:             v1beta1.TaskRunReasonResolvingTaskRef,
+							Reason:             v1.TaskRunReasonResolvingTaskRef,
 							LastTransitionTime: apis.VolatileTime{Inner: metav1.NewTime(now)},
 						},
 					}},
 				},
 			},
-			newTR: &v1beta1.TaskRun{
-				Status: v1beta1.TaskRunStatus{
+			newTR: &v1.TaskRun{
+				Status: v1.TaskRunStatus{
 					Status: duckv1.Status{Conditions: duckv1.Conditions{
 						{
 							Type:               apis.ConditionSucceeded,
 							Status:             corev1.ConditionUnknown,
-							Reason:             v1beta1.TaskRunReasonResolvingTaskRef,
+							Reason:             v1.TaskRunReasonResolvingTaskRef,
 							LastTransitionTime: apis.VolatileTime{Inner: metav1.NewTime(now.Add(1 * time.Second))},
 						},
 					}},
@@ -101,25 +101,25 @@ func TestTaskRefWaitTimeFilter_Update(t *testing.T) {
 		{
 			name:                  "wait over",
 			expectedNonZeroMetric: true,
-			oldTR: &v1beta1.TaskRun{
-				Status: v1beta1.TaskRunStatus{
+			oldTR: &v1.TaskRun{
+				Status: v1.TaskRunStatus{
 					Status: duckv1.Status{Conditions: duckv1.Conditions{
 						{
 							Type:               apis.ConditionSucceeded,
 							Status:             corev1.ConditionUnknown,
-							Reason:             v1beta1.TaskRunReasonResolvingTaskRef,
+							Reason:             v1.TaskRunReasonResolvingTaskRef,
 							LastTransitionTime: apis.VolatileTime{Inner: metav1.NewTime(now)},
 						},
 					}},
 				},
 			},
-			newTR: &v1beta1.TaskRun{
-				Status: v1beta1.TaskRunStatus{
+			newTR: &v1.TaskRun{
+				Status: v1.TaskRunStatus{
 					Status: duckv1.Status{Conditions: duckv1.Conditions{
 						{
 							Type:               apis.ConditionSucceeded,
 							Status:             corev1.ConditionUnknown,
-							Reason:             v1beta1.TaskRunReasonRunning.String(),
+							Reason:             v1.TaskRunReasonRunning.String(),
 							LastTransitionTime: apis.VolatileTime{Inner: metav1.NewTime(now.Add(1 * time.Second))},
 						},
 					}},
