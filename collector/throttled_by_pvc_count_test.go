@@ -5,19 +5,18 @@ import (
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
-	"github.com/tektoncd/pipeline/pkg/reconciler/volumeclaim"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sync"
-	"testing"
-
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/reconciler/volumeclaim"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sync"
+	"testing"
 )
 
 func TestPvcThrottledFilter_Update(t *testing.T) {
@@ -156,156 +155,4 @@ func TestResetPVCStats(t *testing.T) {
 	assert.NoError(t, err)
 	pvcReconciler.resetPVCStats(ctx)
 	validateGaugeVec(t, pvcReconciler.prCollector.pvcThrottle, label, float64(1))
-}
-
-func TestPipelineRunStartTimeEventFilter_Update(t *testing.T) {
-	filter := &startTimeEventFilter{
-		metric: NewPipelineRunScheduledMetric(),
-	}
-	for _, tc := range []struct {
-		name       string
-		oldPR      *v1beta1.PipelineRun
-		newPR      *v1beta1.PipelineRun
-		expectedRC bool
-	}{
-		{
-			name:  "not started",
-			oldPR: &v1beta1.PipelineRun{},
-			newPR: &v1beta1.PipelineRun{},
-		},
-		{
-			name:  "just started",
-			oldPR: &v1beta1.PipelineRun{},
-			newPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
-					PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{StartTime: &metav1.Time{}},
-				},
-			},
-		},
-		{
-			name: "udpate after started",
-			oldPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
-					PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{StartTime: &metav1.Time{}},
-				},
-			},
-			newPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
-					PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{StartTime: &metav1.Time{}},
-				},
-			},
-		},
-	} {
-		ev := event.UpdateEvent{
-			ObjectOld: tc.oldPR,
-			ObjectNew: tc.newPR,
-		}
-		rc := filter.Update(ev)
-		if rc != tc.expectedRC {
-			t.Errorf(fmt.Sprintf("tc %s expected %v but got %v", tc.name, tc.expectedRC, rc))
-		}
-	}
-
-}
-
-func TestTaskRunGapEventFilter_Update(t *testing.T) {
-	filter := &taskRunGapEventFilter{}
-	for _, tc := range []struct {
-		name       string
-		oldPR      *v1beta1.PipelineRun
-		newPR      *v1beta1.PipelineRun
-		expectedRC bool
-	}{
-		{
-			name:  "not done no status",
-			oldPR: &v1beta1.PipelineRun{},
-			newPR: &v1beta1.PipelineRun{},
-		},
-		{
-			name:  "not done status unknown",
-			oldPR: &v1beta1.PipelineRun{},
-			newPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
-					Status: duckv1.Status{
-						Conditions: []apis.Condition{
-							{
-								Type:   apis.ConditionSucceeded,
-								Status: corev1.ConditionUnknown,
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name:  "just done succeed",
-			oldPR: &v1beta1.PipelineRun{},
-			newPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
-					Status: duckv1.Status{
-						Conditions: []apis.Condition{
-							{
-								Type:   apis.ConditionSucceeded,
-								Status: corev1.ConditionTrue,
-							},
-						},
-					},
-				},
-			},
-			expectedRC: true,
-		},
-		{
-			name:  "just done failed",
-			oldPR: &v1beta1.PipelineRun{},
-			newPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
-					Status: duckv1.Status{
-						Conditions: []apis.Condition{
-							{
-								Type:   apis.ConditionSucceeded,
-								Status: corev1.ConditionFalse,
-							},
-						},
-					},
-				},
-			},
-			expectedRC: true,
-		},
-		{
-			name: "udpate after done",
-			oldPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
-					Status: duckv1.Status{
-						Conditions: []apis.Condition{
-							{
-								Type:   apis.ConditionSucceeded,
-								Status: corev1.ConditionFalse,
-							},
-						},
-					},
-				},
-			},
-			newPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
-					Status: duckv1.Status{
-						Conditions: []apis.Condition{
-							{
-								Type:   apis.ConditionSucceeded,
-								Status: corev1.ConditionFalse,
-							},
-						},
-					},
-				},
-			},
-		},
-	} {
-		ev := event.UpdateEvent{
-			ObjectOld: tc.oldPR,
-			ObjectNew: tc.newPR,
-		}
-		rc := filter.Update(ev)
-		if rc != tc.expectedRC {
-			t.Errorf(fmt.Sprintf("tc %s expected %v but got %v", tc.name, tc.expectedRC, rc))
-		}
-	}
 }
