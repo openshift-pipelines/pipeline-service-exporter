@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"knative.dev/pkg/apis"
@@ -24,7 +24,7 @@ func SetupPipelineReferenceWaitTimeController(mgr ctrl.Manager) error {
 	}
 	waitMetric := NewPipelineReferenceWaitTimeMetric()
 	metrics.Registry.MustRegister(waitMetric)
-	return ctrl.NewControllerManagedBy(mgr).For(&v1beta1.PipelineRun{}).WithEventFilter(&pipelineRefWaitTimeFilter{waitDuration: waitMetric}).Complete(reconciler)
+	return ctrl.NewControllerManagedBy(mgr).For(&v1.PipelineRun{}).WithEventFilter(&pipelineRefWaitTimeFilter{waitDuration: waitMetric}).Complete(reconciler)
 }
 
 func NewPipelineReferenceWaitTimeMetric() *prometheus.HistogramVec {
@@ -65,9 +65,8 @@ func (f *pipelineRefWaitTimeFilter) Delete(event.DeleteEvent) bool {
 }
 
 func (f *pipelineRefWaitTimeFilter) Update(e event.UpdateEvent) bool {
-	//TODO remember, keep track of when pipeline-service and RHTAP starts moving from v1beta1 to v1
-	oldPR, okold := e.ObjectOld.(*v1beta1.PipelineRun)
-	newPR, oknew := e.ObjectNew.(*v1beta1.PipelineRun)
+	oldPR, okold := e.ObjectOld.(*v1.PipelineRun)
+	newPR, oknew := e.ObjectNew.(*v1.PipelineRun)
 	if okold && oknew {
 		newSucceedCondition := newPR.Status.GetCondition(apis.ConditionSucceeded)
 		if newSucceedCondition == nil {

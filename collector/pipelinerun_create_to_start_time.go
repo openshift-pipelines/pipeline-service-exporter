@@ -3,7 +3,7 @@ package collector
 import (
 	"context"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -22,7 +22,7 @@ func SetupPipelineRunScheduleDurationController(mgr ctrl.Manager) error {
 		scheme:        mgr.GetScheme(),
 		eventRecorder: mgr.GetEventRecorderFor("MetricExporterPipelineRunsScheduled"),
 	}
-	return ctrl.NewControllerManagedBy(mgr).For(&v1beta1.PipelineRun{}).WithEventFilter(filter).Complete(reconciler)
+	return ctrl.NewControllerManagedBy(mgr).For(&v1.PipelineRun{}).WithEventFilter(filter).Complete(reconciler)
 }
 
 type PipelineRunScheduledCollector struct {
@@ -45,12 +45,12 @@ func NewPipelineRunScheduledMetric() *prometheus.HistogramVec {
 	return durationScheduled
 }
 
-func bumpPipelineRunScheduledDuration(scheduleDuration float64, pr *v1beta1.PipelineRun, metric *prometheus.HistogramVec) {
+func bumpPipelineRunScheduledDuration(scheduleDuration float64, pr *v1.PipelineRun, metric *prometheus.HistogramVec) {
 	labels := map[string]string{NS_LABEL: pr.Namespace, PIPELINE_NAME_LABEL: pipelineRunPipelineRef(pr)}
 	metric.With(labels).Observe(scheduleDuration)
 }
 
-func calculateScheduledDurationPipelineRun(pipelineRun *v1beta1.PipelineRun) float64 {
+func calculateScheduledDurationPipelineRun(pipelineRun *v1.PipelineRun) float64 {
 	return calcuateScheduledDuration(pipelineRun.CreationTimestamp.Time, pipelineRun.Status.StartTime.Time)
 }
 
@@ -75,9 +75,8 @@ func (f *startTimeEventFilter) Delete(event.DeleteEvent) bool {
 
 func (f *startTimeEventFilter) Update(e event.UpdateEvent) bool {
 
-	//TODO remember, keep track of when pipeline-service and RHTAP starts moving from v1beta1 to v1
-	oldPR, okold := e.ObjectOld.(*v1beta1.PipelineRun)
-	newPR, oknew := e.ObjectNew.(*v1beta1.PipelineRun)
+	oldPR, okold := e.ObjectOld.(*v1.PipelineRun)
+	newPR, oknew := e.ObjectNew.(*v1.PipelineRun)
 	if okold && oknew {
 		if oldPR.Status.StartTime == nil && newPR.Status.StartTime != nil {
 			bumpPipelineRunScheduledDuration(calculateScheduledDurationPipelineRun(newPR), newPR, f.metric)

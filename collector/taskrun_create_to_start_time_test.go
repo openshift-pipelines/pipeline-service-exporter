@@ -3,7 +3,7 @@ package collector
 import (
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -18,34 +18,34 @@ func TestTaskRunStartTimeEventFilter_Update(t *testing.T) {
 	filter := &trStartTimeEventFilter{}
 	for _, tc := range []struct {
 		name       string
-		oldTR      *v1beta1.TaskRun
-		newTR      *v1beta1.TaskRun
+		oldTR      *v1.TaskRun
+		newTR      *v1.TaskRun
 		expectedRC bool
 	}{
 		{
 			name:  "not started",
-			oldTR: &v1beta1.TaskRun{},
-			newTR: &v1beta1.TaskRun{},
+			oldTR: &v1.TaskRun{},
+			newTR: &v1.TaskRun{},
 		},
 		{
 			name:  "just started",
-			oldTR: &v1beta1.TaskRun{},
-			newTR: &v1beta1.TaskRun{
-				Status: v1beta1.TaskRunStatus{
-					TaskRunStatusFields: v1beta1.TaskRunStatusFields{StartTime: &metav1.Time{}},
+			oldTR: &v1.TaskRun{},
+			newTR: &v1.TaskRun{
+				Status: v1.TaskRunStatus{
+					TaskRunStatusFields: v1.TaskRunStatusFields{StartTime: &metav1.Time{}},
 				},
 			},
 		},
 		{
 			name: "udpate after started",
-			oldTR: &v1beta1.TaskRun{
-				Status: v1beta1.TaskRunStatus{
-					TaskRunStatusFields: v1beta1.TaskRunStatusFields{StartTime: &metav1.Time{}},
+			oldTR: &v1.TaskRun{
+				Status: v1.TaskRunStatus{
+					TaskRunStatusFields: v1.TaskRunStatusFields{StartTime: &metav1.Time{}},
 				},
 			},
-			newTR: &v1beta1.TaskRun{
-				Status: v1beta1.TaskRunStatus{
-					TaskRunStatusFields: v1beta1.TaskRunStatusFields{StartTime: &metav1.Time{}},
+			newTR: &v1.TaskRun{
+				Status: v1.TaskRunStatus{
+					TaskRunStatusFields: v1.TaskRunStatusFields{StartTime: &metav1.Time{}},
 				},
 			},
 		},
@@ -66,7 +66,7 @@ func TestTaskRunStartTimeEventFilter_Update(t *testing.T) {
 }
 
 func TestTaskRunScheduledCollection(t *testing.T) {
-	mockTaskRuns := []*v1beta1.TaskRun{
+	mockTaskRuns := []*v1.TaskRun{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              "test-taskrun-1",
@@ -74,7 +74,7 @@ func TestTaskRunScheduledCollection(t *testing.T) {
 				UID:               types.UID("test-taskrun-1"),
 				CreationTimestamp: metav1.NewTime(time.Now().UTC()),
 			},
-			Status: v1beta1.TaskRunStatus{
+			Status: v1.TaskRunStatus{
 				Status: duckv1.Status{
 					ObservedGeneration: 0,
 					Conditions: duckv1.Conditions{{
@@ -83,7 +83,7 @@ func TestTaskRunScheduledCollection(t *testing.T) {
 					}},
 					Annotations: nil,
 				},
-				TaskRunStatusFields: v1beta1.TaskRunStatusFields{
+				TaskRunStatusFields: v1.TaskRunStatusFields{
 					StartTime:      &metav1.Time{Time: time.Now().UTC().Add(5 * time.Second)},
 					CompletionTime: &metav1.Time{Time: time.Now().UTC().Add(10 * time.Second)},
 				},
@@ -96,7 +96,7 @@ func TestTaskRunScheduledCollection(t *testing.T) {
 				UID:               types.UID("test-taskrun-2"),
 				CreationTimestamp: metav1.NewTime(time.Now().UTC()),
 			},
-			Status: v1beta1.TaskRunStatus{
+			Status: v1.TaskRunStatus{
 				Status: duckv1.Status{
 					ObservedGeneration: 0,
 					Conditions: duckv1.Conditions{{
@@ -105,7 +105,7 @@ func TestTaskRunScheduledCollection(t *testing.T) {
 					}},
 					Annotations: nil,
 				},
-				TaskRunStatusFields: v1beta1.TaskRunStatusFields{
+				TaskRunStatusFields: v1.TaskRunStatusFields{
 					StartTime: &metav1.Time{Time: time.Now().UTC().Add(5 * time.Second)},
 				},
 			},
@@ -125,17 +125,17 @@ func TestCalculateTaskRunScheduledDuration(t *testing.T) {
 	now := time.Now()
 	for _, tc := range []struct {
 		expectedAmt float64
-		tr          *v1beta1.TaskRun
+		tr          *v1.TaskRun
 	}{
 		{
 			expectedAmt: 5,
-			tr: &v1beta1.TaskRun{
+			tr: &v1.TaskRun{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "test-taskrun-1",
 					Namespace:         "test-namespace",
 					CreationTimestamp: metav1.NewTime(now),
 				},
-				Status: v1beta1.TaskRunStatus{
+				Status: v1.TaskRunStatus{
 					Status: duckv1.Status{
 						ObservedGeneration: 0,
 						Conditions: duckv1.Conditions{{
@@ -144,7 +144,7 @@ func TestCalculateTaskRunScheduledDuration(t *testing.T) {
 						}},
 						Annotations: nil,
 					},
-					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
+					TaskRunStatusFields: v1.TaskRunStatusFields{
 						StartTime:      &metav1.Time{Time: now.Add(5 * time.Second)},
 						CompletionTime: &metav1.Time{Time: now.Add(10 * time.Second)},
 					},
@@ -153,13 +153,13 @@ func TestCalculateTaskRunScheduledDuration(t *testing.T) {
 		},
 		{
 			expectedAmt: 5,
-			tr: &v1beta1.TaskRun{
+			tr: &v1.TaskRun{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "test-taskrun-1",
 					Namespace:         "test-namespace",
 					CreationTimestamp: metav1.NewTime(now),
 				},
-				Status: v1beta1.TaskRunStatus{
+				Status: v1.TaskRunStatus{
 					Status: duckv1.Status{
 						ObservedGeneration: 0,
 						Conditions: duckv1.Conditions{{
@@ -168,7 +168,7 @@ func TestCalculateTaskRunScheduledDuration(t *testing.T) {
 						}},
 						Annotations: nil,
 					},
-					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
+					TaskRunStatusFields: v1.TaskRunStatusFields{
 						StartTime:      &metav1.Time{Time: now.Add(5 * time.Second)},
 						CompletionTime: &metav1.Time{Time: now.Add(10 * time.Second)},
 					},

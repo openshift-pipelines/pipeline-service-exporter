@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -24,7 +24,7 @@ func SetupTaskReferenceWaitTimeController(mgr ctrl.Manager) error {
 	}
 	waitMetric := NewTaskReferenceWaitTimeMetric()
 	metrics.Registry.MustRegister(waitMetric)
-	return ctrl.NewControllerManagedBy(mgr).For(&v1beta1.TaskRun{}).WithEventFilter(&taskRefWaitTimeFilter{waitDuration: waitMetric}).Complete(reconciler)
+	return ctrl.NewControllerManagedBy(mgr).For(&v1.TaskRun{}).WithEventFilter(&taskRefWaitTimeFilter{waitDuration: waitMetric}).Complete(reconciler)
 }
 
 func NewTaskReferenceWaitTimeMetric() *prometheus.HistogramVec {
@@ -65,9 +65,8 @@ func (f *taskRefWaitTimeFilter) Delete(event.DeleteEvent) bool {
 }
 
 func (f *taskRefWaitTimeFilter) Update(e event.UpdateEvent) bool {
-	//TODO remember, keep track of when pipeline-service and RHTAP starts moving from v1beta1 to v1
-	oldTR, okold := e.ObjectOld.(*v1beta1.TaskRun)
-	newTR, oknew := e.ObjectNew.(*v1beta1.TaskRun)
+	oldTR, okold := e.ObjectOld.(*v1.TaskRun)
+	newTR, oknew := e.ObjectNew.(*v1.TaskRun)
 	if okold && oknew {
 		newSucceedCondition := newTR.Status.GetCondition(apis.ConditionSucceeded)
 		if newSucceedCondition == nil {
@@ -90,7 +89,7 @@ func (f *taskRefWaitTimeFilter) Update(e event.UpdateEvent) bool {
 		}
 		oldReason := oldSucceedCondtition.Reason
 		newReason := newSucceedCondition.Reason
-		if oldReason == v1beta1.TaskRunReasonResolvingTaskRef && newReason != v1beta1.TaskRunReasonResolvingTaskRef {
+		if oldReason == v1.TaskRunReasonResolvingTaskRef && newReason != v1.TaskRunReasonResolvingTaskRef {
 			labels := map[string]string{NS_LABEL: newTR.Namespace, TASK_NAME_LABEL: taskRef(newTR.Labels)}
 			originalTime := oldSucceedCondtition.LastTransitionTime.Inner
 			f.waitDuration.With(labels).Observe(float64(newSucceedCondition.LastTransitionTime.Inner.Sub(originalTime.Time).Milliseconds()))
@@ -99,7 +98,7 @@ func (f *taskRefWaitTimeFilter) Update(e event.UpdateEvent) bool {
 		// per current examination of Tekton code, we should not see any updates in transition time
 		// if multiple SetCondition calls are made, as the Reason/Message fields should not change for resolving refs,
 		// but if that changes, this log should be a warning
-		if oldReason == v1beta1.TaskRunReasonResolvingTaskRef && newReason == v1beta1.TaskRunReasonResolvingTaskRef &&
+		if oldReason == v1.TaskRunReasonResolvingTaskRef && newReason == v1.TaskRunReasonResolvingTaskRef &&
 			!oldSucceedCondtition.LastTransitionTime.Inner.Equal(&newSucceedCondition.LastTransitionTime.Inner) {
 			ctrl.Log.Info(fmt.Sprintf("WARNING resolving condition for taskrun %s:%s changed from %#v to %#v",
 				newTR.Namespace,
@@ -112,7 +111,7 @@ func (f *taskRefWaitTimeFilter) Update(e event.UpdateEvent) bool {
 	return false
 }
 
-func (f *taskRefWaitTimeFilter) getKey(tr *v1beta1.TaskRun) string {
+func (f *taskRefWaitTimeFilter) getKey(tr *v1.TaskRun) string {
 	key := types.NamespacedName{
 		Namespace: tr.Namespace,
 		Name:      tr.Name,

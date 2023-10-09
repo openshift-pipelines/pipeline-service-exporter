@@ -3,7 +3,7 @@ package collector
 import (
 	"context"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -45,7 +45,7 @@ func SetupTaskRunScheduleDurationController(mgr ctrl.Manager) error {
 		scheme:        mgr.GetScheme(),
 		eventRecorder: mgr.GetEventRecorderFor("MetricExporterScheduledTaskRuns"),
 	}
-	return ctrl.NewControllerManagedBy(mgr).For(&v1beta1.TaskRun{}).WithEventFilter(filter).Complete(reconciler)
+	return ctrl.NewControllerManagedBy(mgr).For(&v1.TaskRun{}).WithEventFilter(filter).Complete(reconciler)
 }
 
 func NewTaskRunScheduledMetric() *prometheus.HistogramVec {
@@ -87,9 +87,8 @@ func (f *trStartTimeEventFilter) Delete(event.DeleteEvent) bool {
 }
 
 func (f *trStartTimeEventFilter) Update(e event.UpdateEvent) bool {
-	//TODO remember, keep track of when pipeline-service and RHTAP starts moving from v1beta1 to v1
-	oldTR, okold := e.ObjectOld.(*v1beta1.TaskRun)
-	newTR, oknew := e.ObjectNew.(*v1beta1.TaskRun)
+	oldTR, okold := e.ObjectOld.(*v1.TaskRun)
+	newTR, oknew := e.ObjectNew.(*v1.TaskRun)
 	if okold && oknew {
 		if oldTR.Status.StartTime == nil && newTR.Status.StartTime != nil {
 			bumpTaskRunScheduledDuration(calculateScheduledDurationTaskRun(newTR), newTR, f.metric)
@@ -103,11 +102,11 @@ func (r *ReconcileTaskRunScheduled) Reconcile(ctx context.Context, request recon
 	return reconcile.Result{}, nil
 }
 
-func bumpTaskRunScheduledDuration(scheduleDuration float64, tr *v1beta1.TaskRun, metric *prometheus.HistogramVec) {
+func bumpTaskRunScheduledDuration(scheduleDuration float64, tr *v1.TaskRun, metric *prometheus.HistogramVec) {
 	labels := map[string]string{NS_LABEL: tr.Namespace, TASK_NAME_LABEL: taskRef(tr.Labels)}
 	metric.With(labels).Observe(scheduleDuration)
 }
 
-func calculateScheduledDurationTaskRun(taskrun *v1beta1.TaskRun) float64 {
+func calculateScheduledDurationTaskRun(taskrun *v1.TaskRun) float64 {
 	return calcuateScheduledDuration(taskrun.CreationTimestamp.Time, taskrun.Status.StartTime.Time)
 }

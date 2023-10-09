@@ -18,7 +18,7 @@ package collector
 
 import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"os"
 	"strconv"
 	"strings"
@@ -37,7 +37,7 @@ const (
 	FAILED                              = "failed"
 )
 
-func pipelineRunPipelineRef(pr *v1beta1.PipelineRun) string {
+func pipelineRunPipelineRef(pr *v1.PipelineRun) string {
 	val := ""
 	ref := pr.Spec.PipelineRef
 	if ref != nil {

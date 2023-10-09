@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"github.com/tektoncd/pipeline/pkg/reconciler/volumeclaim"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,20 +23,20 @@ func TestPvcThrottledFilter_Update(t *testing.T) {
 	filter := &pvcThrottledFilter{}
 	for _, tc := range []struct {
 		name       string
-		oldPR      *v1beta1.PipelineRun
-		newPR      *v1beta1.PipelineRun
+		oldPR      *v1.PipelineRun
+		newPR      *v1.PipelineRun
 		expectedRC bool
 	}{
 		{
 			name:  "not failed",
-			oldPR: &v1beta1.PipelineRun{},
-			newPR: &v1beta1.PipelineRun{},
+			oldPR: &v1.PipelineRun{},
+			newPR: &v1.PipelineRun{},
 		},
 		{
 			name:  "failed with right reason and message",
-			oldPR: &v1beta1.PipelineRun{},
-			newPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
+			oldPR: &v1.PipelineRun{},
+			newPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
 					Status: duckv1.Status{
 						Conditions: duckv1.Conditions{
 							apis.Condition{
@@ -53,9 +53,9 @@ func TestPvcThrottledFilter_Update(t *testing.T) {
 		},
 		{
 			name:  "failed with right reason but wrong message",
-			oldPR: &v1beta1.PipelineRun{},
-			newPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
+			oldPR: &v1.PipelineRun{},
+			newPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
 					Status: duckv1.Status{
 						Conditions: duckv1.Conditions{
 							apis.Condition{
@@ -71,9 +71,9 @@ func TestPvcThrottledFilter_Update(t *testing.T) {
 		},
 		{
 			name:  "failed with right message but wrong reason",
-			oldPR: &v1beta1.PipelineRun{},
-			newPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
+			oldPR: &v1.PipelineRun{},
+			newPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
 					Status: duckv1.Status{
 						Conditions: duckv1.Conditions{
 							apis.Condition{
@@ -102,13 +102,13 @@ func TestPvcThrottledFilter_Update(t *testing.T) {
 func TestResetPVCStats(t *testing.T) {
 	objs := []client.Object{}
 	scheme := runtime.NewScheme()
-	_ = v1beta1.AddToScheme(scheme)
+	_ = v1.AddToScheme(scheme)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 
-	mockPipelineRuns := []*v1beta1.PipelineRun{
+	mockPipelineRuns := []*v1.PipelineRun{
 		{
 			ObjectMeta: metav1.ObjectMeta{Namespace: "test-namespace", Name: "test-1"},
-			Status: v1beta1.PipelineRunStatus{
+			Status: v1.PipelineRunStatus{
 				Status: duckv1.Status{
 					Conditions: duckv1.Conditions{
 						apis.Condition{
@@ -123,7 +123,7 @@ func TestResetPVCStats(t *testing.T) {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{Namespace: "test-namespace", Name: "test-2"},
-			Status: v1beta1.PipelineRunStatus{
+			Status: v1.PipelineRunStatus{
 				Status: duckv1.Status{
 					Conditions: duckv1.Conditions{
 						apis.Condition{

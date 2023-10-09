@@ -5,7 +5,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
@@ -20,21 +20,21 @@ func TestPipelineRefWaitTimeFilter_Update(t *testing.T) {
 	now := time.Now()
 	for _, tc := range []struct {
 		name                  string
-		oldPR                 *v1beta1.PipelineRun
-		newPR                 *v1beta1.PipelineRun
+		oldPR                 *v1.PipelineRun
+		newPR                 *v1.PipelineRun
 		expectedRC            bool
 		expectedNonZeroMetric bool
 	}{
 		{
 			name:  "not started",
-			oldPR: &v1beta1.PipelineRun{},
-			newPR: &v1beta1.PipelineRun{},
+			oldPR: &v1.PipelineRun{},
+			newPR: &v1.PipelineRun{},
 		},
 		{
 			name:  "done",
-			oldPR: &v1beta1.PipelineRun{},
-			newPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
+			oldPR: &v1.PipelineRun{},
+			newPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
 					Status: duckv1.Status{Conditions: duckv1.Conditions{
 						{
 							Type:   apis.ConditionSucceeded,
@@ -46,8 +46,8 @@ func TestPipelineRefWaitTimeFilter_Update(t *testing.T) {
 		},
 		{
 			name: "both running, same transition time",
-			oldPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
+			oldPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
 					Status: duckv1.Status{Conditions: duckv1.Conditions{
 						{
 							Type:               apis.ConditionSucceeded,
@@ -58,8 +58,8 @@ func TestPipelineRefWaitTimeFilter_Update(t *testing.T) {
 					}},
 				},
 			},
-			newPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
+			newPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
 					Status: duckv1.Status{Conditions: duckv1.Conditions{
 						{
 							Type:               apis.ConditionSucceeded,
@@ -73,8 +73,8 @@ func TestPipelineRefWaitTimeFilter_Update(t *testing.T) {
 		},
 		{
 			name: "both running, diff transition time",
-			oldPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
+			oldPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
 					Status: duckv1.Status{Conditions: duckv1.Conditions{
 						{
 							Type:               apis.ConditionSucceeded,
@@ -85,8 +85,8 @@ func TestPipelineRefWaitTimeFilter_Update(t *testing.T) {
 					}},
 				},
 			},
-			newPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
+			newPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
 					Status: duckv1.Status{Conditions: duckv1.Conditions{
 						{
 							Type:               apis.ConditionSucceeded,
@@ -101,8 +101,8 @@ func TestPipelineRefWaitTimeFilter_Update(t *testing.T) {
 		{
 			name:                  "wait over",
 			expectedNonZeroMetric: true,
-			oldPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
+			oldPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
 					Status: duckv1.Status{Conditions: duckv1.Conditions{
 						{
 							Type:               apis.ConditionSucceeded,
@@ -113,8 +113,8 @@ func TestPipelineRefWaitTimeFilter_Update(t *testing.T) {
 					}},
 				},
 			},
-			newPR: &v1beta1.PipelineRun{
-				Status: v1beta1.PipelineRunStatus{
+			newPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
 					Status: duckv1.Status{Conditions: duckv1.Conditions{
 						{
 							Type:               apis.ConditionSucceeded,

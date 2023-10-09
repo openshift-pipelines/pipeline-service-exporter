@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"time"
 
-	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -45,13 +45,12 @@ func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
 	if err := k8sscheme.AddToScheme(options.Scheme); err != nil {
 		return nil, err
 	}
-	//TODO v1 tekton API is coming soon
-	if err := pipelinev1beta1.AddToScheme(options.Scheme); err != nil {
+	if err := pipelinev1.AddToScheme(options.Scheme); err != nil {
 		return nil, err
 	}
 	options.NewCache = cache.BuilderWithOptions(cache.Options{
 		SelectorsByObject: cache.SelectorsByObject{
-			&pipelinev1beta1.PipelineRun{}: {},
+			&pipelinev1.PipelineRun{}: {},
 		}})
 
 	var mgr ctrl.Manager
@@ -120,6 +119,6 @@ func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return mgr, nil
 }
