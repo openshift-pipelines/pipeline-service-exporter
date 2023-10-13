@@ -93,6 +93,7 @@ func (r *ReconcilePVCThrottled) Start(ctx context.Context) error {
 		case <-eventTicker.C:
 			r.resetPVCStats(ctx)
 		case <-ctx.Done():
+			controllerLog.Info("ReconcilePVCThrottled Runnable context is marked as done, exiting")
 			eventTicker.Stop()
 			return nil
 		}
