@@ -52,6 +52,9 @@ spec:
               script: |
                 #!/usr/bin/env bash
                 cd $(workspaces.source.path)
+                cd source
+                go mod tidy
+                go mod vendor
                 go test ./...
           workspaces:
             - name: source
