@@ -49,6 +49,27 @@ func TestTaskRunStartTimeEventFilter_Update(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "completed",
+			oldTR: &v1.TaskRun{
+				Status: v1.TaskRunStatus{
+					TaskRunStatusFields: v1.TaskRunStatusFields{StartTime: &metav1.Time{}},
+				},
+			},
+			newTR: &v1.TaskRun{
+				Status: v1.TaskRunStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 0,
+						Conditions: duckv1.Conditions{{
+							Type:   "Succeeded",
+							Status: corev1.ConditionTrue,
+						}},
+						Annotations: nil,
+					},
+					TaskRunStatusFields: v1.TaskRunStatusFields{StartTime: &metav1.Time{}},
+				},
+			},
+		},
 	} {
 		ev := event.UpdateEvent{
 			ObjectOld: tc.oldTR,
@@ -114,7 +135,7 @@ func TestTaskRunScheduledCollection(t *testing.T) {
 
 	for _, tr := range mockTaskRuns {
 		metric := NewTaskRunScheduledMetric()
-		label := prometheus.Labels{NS_LABEL: "test-namespace", TASK_NAME_LABEL: taskRef(tr.Labels)}
+		label := prometheus.Labels{NS_LABEL: "test-namespace", TASK_NAME_LABEL: taskRef(tr.Labels), STATUS_LABEL: SUCCEEDED}
 		bumpTaskRunScheduledDuration(calculateScheduledDurationTaskRun(tr), tr, metric)
 		validateHistogramVec(t, metric, label, false)
 		metrics.Registry.Unregister(metric)

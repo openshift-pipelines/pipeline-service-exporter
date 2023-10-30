@@ -50,6 +50,27 @@ func TestPipelineRunStartTimeEventFilter_Update(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "completed",
+			oldPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
+					PipelineRunStatusFields: v1.PipelineRunStatusFields{StartTime: &metav1.Time{}},
+				},
+			},
+			newPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
+					Status: duckv1.Status{
+						ObservedGeneration: 0,
+						Conditions: duckv1.Conditions{{
+							Type:   "Succeeded",
+							Status: corev1.ConditionTrue,
+						}},
+						Annotations: nil,
+					},
+					PipelineRunStatusFields: v1.PipelineRunStatusFields{StartTime: &metav1.Time{}},
+				},
+			},
+		},
 	} {
 		ev := event.UpdateEvent{
 			ObjectOld: tc.oldPR,
@@ -150,7 +171,7 @@ func TestPipelineRunScheduleCollection(t *testing.T) {
 	}
 	for _, pr := range mockPipelineRuns {
 		metric := NewPipelineRunScheduledMetric()
-		label := prometheus.Labels{NS_LABEL: "test-namespace", PIPELINE_NAME_LABEL: pipelineRunPipelineRef(pr)}
+		label := prometheus.Labels{NS_LABEL: "test-namespace", PIPELINE_NAME_LABEL: pipelineRunPipelineRef(pr), STATUS_LABEL: SUCCEEDED}
 		bumpPipelineRunScheduledDuration(calculateScheduledDurationPipelineRun(pr), pr, metric)
 		validateHistogramVec(t, metric, label, false)
 		metrics.Registry.Unregister(metric)

@@ -6,6 +6,7 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -31,7 +32,7 @@ type PipelineRunScheduledCollector struct {
 }
 
 func NewPipelineRunScheduledMetric() *prometheus.HistogramVec {
-	labelNames := []string{NS_LABEL, PIPELINE_NAME_LABEL}
+	labelNames := []string{NS_LABEL, PIPELINE_NAME_LABEL, STATUS_LABEL}
 	durationScheduled := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "pipelinerun_duration_scheduled_seconds",
 		Help: "Duration in seconds for a PipelineRun to be 'scheduled', meaning it has been received by the Tekton controller.  This is an indication of how quickly create events from the API server are arriving to the Tekton controller.",
@@ -46,7 +47,12 @@ func NewPipelineRunScheduledMetric() *prometheus.HistogramVec {
 }
 
 func bumpPipelineRunScheduledDuration(scheduleDuration float64, pr *v1.PipelineRun, metric *prometheus.HistogramVec) {
-	labels := map[string]string{NS_LABEL: pr.Namespace, PIPELINE_NAME_LABEL: pipelineRunPipelineRef(pr)}
+	succeededCondition := pr.Status.GetCondition(apis.ConditionSucceeded)
+	status := SUCCEEDED
+	if succeededCondition.IsFalse() {
+		status = FAILED
+	}
+	labels := map[string]string{NS_LABEL: pr.Namespace, PIPELINE_NAME_LABEL: pipelineRunPipelineRef(pr), STATUS_LABEL: status}
 	metric.With(labels).Observe(scheduleDuration)
 }
 
@@ -78,7 +84,7 @@ func (f *startTimeEventFilter) Update(e event.UpdateEvent) bool {
 	oldPR, okold := e.ObjectOld.(*v1.PipelineRun)
 	newPR, oknew := e.ObjectNew.(*v1.PipelineRun)
 	if okold && oknew {
-		if oldPR.Status.StartTime == nil && newPR.Status.StartTime != nil {
+		if !oldPR.IsDone() && newPR.IsDone() {
 			bumpPipelineRunScheduledDuration(calculateScheduledDurationPipelineRun(newPR), newPR, f.metric)
 			return false
 		}
