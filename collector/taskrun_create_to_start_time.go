@@ -6,6 +6,7 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -49,7 +50,7 @@ func SetupTaskRunScheduleDurationController(mgr ctrl.Manager) error {
 }
 
 func NewTaskRunScheduledMetric() *prometheus.HistogramVec {
-	labelNames := []string{NS_LABEL, TASK_NAME_LABEL}
+	labelNames := []string{NS_LABEL, TASK_NAME_LABEL, STATUS_LABEL}
 	durationScheduled := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "taskrun_duration_scheduled_seconds",
 		Help: "Duration in seconds for a TaskRun to be 'scheduled', meaning it has been received by the Tekton controller.  This is an indication of how quickly create events from the API server are arriving to the Tekton controller.",
@@ -90,7 +91,7 @@ func (f *trStartTimeEventFilter) Update(e event.UpdateEvent) bool {
 	oldTR, okold := e.ObjectOld.(*v1.TaskRun)
 	newTR, oknew := e.ObjectNew.(*v1.TaskRun)
 	if okold && oknew {
-		if oldTR.Status.StartTime == nil && newTR.Status.StartTime != nil {
+		if !oldTR.IsDone() && newTR.IsDone() {
 			bumpTaskRunScheduledDuration(calculateScheduledDurationTaskRun(newTR), newTR, f.metric)
 			return false
 		}
@@ -103,7 +104,12 @@ func (r *ReconcileTaskRunScheduled) Reconcile(ctx context.Context, request recon
 }
 
 func bumpTaskRunScheduledDuration(scheduleDuration float64, tr *v1.TaskRun, metric *prometheus.HistogramVec) {
-	labels := map[string]string{NS_LABEL: tr.Namespace, TASK_NAME_LABEL: taskRef(tr.Labels)}
+	succeedCondition := tr.Status.GetCondition(apis.ConditionSucceeded)
+	status := SUCCEEDED
+	if succeedCondition.IsFalse() {
+		status = FAILED
+	}
+	labels := map[string]string{NS_LABEL: tr.Namespace, TASK_NAME_LABEL: taskRef(tr.Labels), STATUS_LABEL: status}
 	metric.With(labels).Observe(scheduleDuration)
 }
 
