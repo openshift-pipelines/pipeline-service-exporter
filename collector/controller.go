@@ -136,5 +136,10 @@ func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
 		return nil, err
 	}
 
+	err = SetupOverheadController(mgr)
+	if err != nil {
+		return nil, err
+	}
+
 	return mgr, nil
 }

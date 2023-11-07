@@ -114,5 +114,5 @@ func bumpTaskRunScheduledDuration(scheduleDuration float64, tr *v1.TaskRun, metr
 }
 
 func calculateScheduledDurationTaskRun(taskrun *v1.TaskRun) float64 {
-	return calcuateScheduledDuration(taskrun.CreationTimestamp.Time, taskrun.Status.StartTime.Time)
+	return calculateScheduledDuration(taskrun.CreationTimestamp.Time, taskrun.Status.StartTime.Time)
 }

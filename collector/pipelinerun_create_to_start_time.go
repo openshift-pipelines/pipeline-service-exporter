@@ -57,7 +57,7 @@ func bumpPipelineRunScheduledDuration(scheduleDuration float64, pr *v1.PipelineR
 }
 
 func calculateScheduledDurationPipelineRun(pipelineRun *v1.PipelineRun) float64 {
-	return calcuateScheduledDuration(pipelineRun.CreationTimestamp.Time, pipelineRun.Status.StartTime.Time)
+	return calculateScheduledDuration(pipelineRun.CreationTimestamp.Time, pipelineRun.Status.StartTime.Time) / 1000
 }
 
 type ReconcilePipelineRunScheduled struct {
