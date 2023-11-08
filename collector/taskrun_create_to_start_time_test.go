@@ -149,7 +149,7 @@ func TestCalculateTaskRunScheduledDuration(t *testing.T) {
 		tr          *v1.TaskRun
 	}{
 		{
-			expectedAmt: 5,
+			expectedAmt: 5000,
 			tr: &v1.TaskRun{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "test-taskrun-1",
@@ -173,7 +173,7 @@ func TestCalculateTaskRunScheduledDuration(t *testing.T) {
 			},
 		},
 		{
-			expectedAmt: 5,
+			expectedAmt: 5000,
 			tr: &v1.TaskRun{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "test-taskrun-1",
