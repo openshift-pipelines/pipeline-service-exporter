@@ -99,6 +99,8 @@ func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Req
 		if foundGaps {
 			if !filter(gapTotal, totalDuration) {
 				overhead := gapTotal / totalDuration
+				log.V(4).Info(fmt.Sprintf("registering execution metric for %s with gap %v and total %v and overhead %v",
+					request.NamespacedName.String(), gapTotal, totalDuration, overhead))
 				r.collector.execution.With(labels).Observe(overhead)
 			} else {
 				log.V(4).Info(fmt.Sprintf("filtering execution metric for %s with gap %v and total %v",
@@ -108,6 +110,8 @@ func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Req
 		scheduleDuration := calculateScheduledDuration(pr.CreationTimestamp.Time, pr.Status.StartTime.Time)
 		if !filter(scheduleDuration, totalDuration) {
 			overhead := scheduleDuration / totalDuration
+			log.V(4).Info(fmt.Sprintf("registering scheduling metric for %s with gap %v and total %v and overhead %v",
+				request.NamespacedName.String(), scheduleDuration, totalDuration, overhead))
 			r.collector.scheduling.With(labels).Observe(overhead)
 		} else {
 			log.V(4).Info(fmt.Sprintf("filtering scheduling metric for %s with gap %v and total %v",
