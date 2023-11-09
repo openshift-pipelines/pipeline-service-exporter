@@ -56,6 +56,12 @@ func main() {
 	klog.InitFlags(flag.CommandLine)
 	flag.Parse()
 
+	/*
+			FYI tracing set set with this zap argument on the deployment (see https://sdk.operatorframework.io/docs/building-operators/golang/references/logging/)
+		          args:
+		            - -zap-log-level=6
+	*/
+
 	logger := zap.New(zap.UseFlagOptions(&opts))
 	ctrl.SetLogger(logger)
 	mainLog = ctrl.Log.WithName("main")

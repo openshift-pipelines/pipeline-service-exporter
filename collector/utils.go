@@ -33,6 +33,8 @@ import (
 )
 
 const (
+	FILTER_THRESHOLD                    = "FILTER_THRESHOLD"
+	DEFAULT_THRESHOLD                   = float64(300)
 	ENABLE_GAP_METRIC_ADDITIONAL_LABELS = "ENABLE_GAP_METRIC_ADDITIONAL_LABELS"
 	NS_LABEL                            = "namespace"
 	PIPELINE_NAME_LABEL                 = "pipelinename"
@@ -245,10 +247,20 @@ func calculateGaps(ctx context.Context, pr *v1.PipelineRun, oc client.Client, so
 }
 
 func filter(numerator, denominator float64) bool {
+	threshold := DEFAULT_THRESHOLD
+	thresholdStr := os.Getenv(FILTER_THRESHOLD)
+	if len(thresholdStr) > 0 {
+		thresholdOverride, err := strconv.ParseFloat(thresholdStr, 64)
+		if err != nil {
+			ctrl.Log.V(6).Info(fmt.Sprintf("error parsing %s env of %s: %s", FILTER_THRESHOLD, thresholdStr, err.Error()))
+		} else {
+			threshold = thresholdOverride
+		}
+	}
 	// if overhead is non-zero, but total duration is less that 40 seconds,
 	// this is a simpler, most likely user defined pipeline which does not fall
 	// under our image building based overhead concerns
-	if numerator > 0 && denominator < 40000 {
+	if numerator > 0 && denominator < threshold {
 		return true
 	}
 	//TODO we don't have a sense for it yet, but at some point we may get an idea
