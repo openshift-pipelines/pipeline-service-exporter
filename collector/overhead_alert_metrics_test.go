@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -49,7 +50,7 @@ func TestReconcileOverhead_Reconcile(t *testing.T) {
 		err = c.Create(ctx, tr)
 		assert.NoError(t, err)
 	}
-	for _, prv1beta1 := range prs {
+	for index, prv1beta1 := range prs {
 		// mimic what the tekton conversion webhook will do
 		pr := &v1.PipelineRun{}
 		err = prv1beta1.ConvertTo(ctx, pr)
@@ -64,8 +65,34 @@ func TestReconcileOverhead_Reconcile(t *testing.T) {
 		}
 		_, err = overheadReconciler.Reconcile(ctx, request)
 		label := prometheus.Labels{NS_LABEL: pr.Namespace, STATUS_LABEL: SUCCEEDED}
-		validateHistogramVec(t, overheadReconciler.collector.scheduling, label, true)
-		validateHistogramVec(t, overheadReconciler.collector.execution, label, true)
+		// with our actual RHTAP samples the first entry had 0 scheduling overhead so we created a metric,
+		// but the rest was filtered
+		var observer prometheus.Observer
+		var histogram prometheus.Histogram
+		var metric *dto.Metric
+		if index == 0 {
+			validateHistogramVec(t, overheadReconciler.collector.scheduling, label, true)
+		} else {
+			observer, err = overheadReconciler.collector.scheduling.GetMetricWith(label)
+			assert.NoError(t, err)
+			assert.NotNil(t, observer)
+			histogram = observer.(prometheus.Histogram)
+			metric = &dto.Metric{}
+			histogram.Write(metric)
+			assert.NotNil(t, metric.Histogram)
+			assert.NotNil(t, metric.Histogram.SampleCount)
+			assert.Equal(t, *metric.Histogram.SampleCount, uint64(0))
+		}
+		observer, err = overheadReconciler.collector.execution.GetMetricWith(label)
+		assert.NoError(t, err)
+		assert.NotNil(t, observer)
+		histogram = observer.(prometheus.Histogram)
+		metric = &dto.Metric{}
+		histogram.Write(metric)
+		assert.NotNil(t, metric.Histogram)
+		assert.NotNil(t, metric.Histogram.SampleCount)
+		assert.Equal(t, *metric.Histogram.SampleCount, uint64(0))
+
 	}
 
 }
