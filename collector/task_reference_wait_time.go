@@ -97,10 +97,12 @@ func (f *taskRefWaitTimeFilter) Update(e event.UpdateEvent) bool {
 		}
 		// per current examination of Tekton code, we should not see any updates in transition time
 		// if multiple SetCondition calls are made, as the Reason/Message fields should not change for resolving refs,
-		// but if that changes, this log should be a warning
+		// but if that changes, this log should be a warning;
+		// after running with the log below for a few weeks, the difference has only ever been 1 second, so coverting to debug
+		// log from info log
 		if oldReason == v1.TaskRunReasonResolvingTaskRef && newReason == v1.TaskRunReasonResolvingTaskRef &&
 			!oldSucceedCondtition.LastTransitionTime.Inner.Equal(&newSucceedCondition.LastTransitionTime.Inner) {
-			ctrl.Log.Info(fmt.Sprintf("WARNING resolving condition for taskrun %s:%s changed from %#v to %#v",
+			ctrl.Log.V(6).Info(fmt.Sprintf("WARNING resolving condition for taskrun %s:%s changed from %#v to %#v",
 				newTR.Namespace,
 				newTR.Name,
 				oldSucceedCondtition,
