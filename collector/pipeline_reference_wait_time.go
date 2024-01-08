@@ -98,10 +98,12 @@ func (f *pipelineRefWaitTimeFilter) Update(e event.UpdateEvent) bool {
 		// wrt direct string reference, waiting for tag/release with constant moved to the api package;
 		// otherwise, per current examination of Tekton code, we should not see any updates in transition time
 		// if multiple SetCondition calls are made, as the Reason/Message fields should not change for resolving refs,
-		// but if that changes, this log should be a warning
+		// but if that changes, this log should be a warning;
+		// after running with the log below for a few weeks, the difference has only ever been 1 second, so coverting to debug
+		// log from info log
 		if oldReason == "ResolvingPipelineRef" && newReason == "ResolvingPipelineRef" &&
 			!oldSucceedCondtition.LastTransitionTime.Inner.Equal(&newSucceedCondition.LastTransitionTime.Inner) {
-			ctrl.Log.Info(fmt.Sprintf("WARNING resolving condition for pipelinerun %s:%s changed from %#v to %#v",
+			ctrl.Log.V(6).Info(fmt.Sprintf("WARNING resolving condition for pipelinerun %s:%s changed from %#v to %#v",
 				newPR.Namespace,
 				newPR.Name,
 				oldSucceedCondtition,
