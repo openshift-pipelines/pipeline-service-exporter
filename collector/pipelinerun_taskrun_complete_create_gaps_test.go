@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"testing"
 	"time"
@@ -200,7 +201,48 @@ func TestPipelineRunGapCollection(t *testing.T) {
 
 	label := prometheus.Labels{NS_LABEL: "test-namespace", STATUS_LABEL: SUCCEEDED}
 	validateHistogramVec(t, gapReconciler.prCollector.trGaps, label, false)
+	metrics.Registry.Unregister(gapReconciler.prCollector.trGaps)
 
+}
+
+func TestPipelineRunGapCollection_MissingTaskRuns(t *testing.T) {
+	// rather the golang mocks, grabbed actual RHTAP pipelinerun/taskruns from staging
+	// to drive the gap metric, given its trickiness
+	objs := []client.Object{}
+	scheme := runtime.NewScheme()
+	_ = v1.AddToScheme(scheme)
+	_ = v1beta1.AddToScheme(scheme)
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
+	gapReconciler := &ReconcilePipelineRunTaskRunGap{client: c, prCollector: NewPipelineRunTaskRunGapCollector()}
+
+	var err error
+	// first we test with the samples pulled from actual RHTAP yaml to best capture the parallel task executions
+	prs := []v1beta1.PipelineRun{}
+	prs, err = pipelineRunFromActualRHTAPYaml()
+	if err != nil {
+		t.Fatalf(fmt.Sprintf("%s", err.Error()))
+	}
+	// but we don't created the taskrun children to make sure the stat collection is aborted
+
+	ctx := context.TODO()
+	for _, prv1beta1 := range prs {
+		// mimic what the tekton conversion webhook will do
+		pr := &v1.PipelineRun{}
+		err = prv1beta1.ConvertTo(ctx, pr)
+		assert.NoError(t, err)
+		err = c.Create(ctx, pr)
+		assert.NoError(t, err)
+		request := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: pr.Namespace,
+				Name:      pr.Name,
+			},
+		}
+		_, err = gapReconciler.Reconcile(ctx, request)
+		label := prometheus.Labels{NS_LABEL: pr.Namespace, STATUS_LABEL: SUCCEEDED}
+		validateHistogramVecZeroCount(t, gapReconciler.prCollector.trGaps, label)
+	}
+	metrics.Registry.Unregister(gapReconciler.prCollector.trGaps)
 }
 
 func TestTaskRunGapEventFilter_Update(t *testing.T) {
