@@ -32,6 +32,18 @@ func validateHistogramVec(t *testing.T, h *prometheus.HistogramVec, labels prome
 	}
 }
 
+func validateHistogramVecZeroCount(t *testing.T, h *prometheus.HistogramVec, labels prometheus.Labels) {
+	observer, err := h.GetMetricWith(labels)
+	assert.NoError(t, err)
+	assert.NotNil(t, observer)
+	histogram := observer.(prometheus.Histogram)
+	metric := &dto.Metric{}
+	histogram.Write(metric)
+	assert.NotNil(t, metric.Histogram)
+	assert.NotNil(t, metric.Histogram.SampleCount)
+	assert.Equal(t, uint64(0), *metric.Histogram.SampleCount)
+}
+
 func validateGaugeVec(t *testing.T, g *prometheus.GaugeVec, labels prometheus.Labels, count float64) {
 	gauge, err := g.GetMetricWith(labels)
 	assert.NoError(t, err)

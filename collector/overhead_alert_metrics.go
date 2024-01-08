@@ -62,14 +62,14 @@ func (r *ReconcileOverhead) accumulateGaps(pr *v1.PipelineRun, oc client.Client,
 	}
 	gapTotal := float64(0)
 
-	sortedTaskRunsByCreateTimes, reverseOrderSortedTaskRunsByCompletionTimes := sortTaskRunsForGapCalculations(pr, oc, ctx)
+	sortedTaskRunsByCreateTimes, reverseOrderSortedTaskRunsByCompletionTimes, abort := sortTaskRunsForGapCalculations(pr, oc, ctx)
 
 	gapEntries := calculateGaps(ctx, pr, oc, sortedTaskRunsByCreateTimes, reverseOrderSortedTaskRunsByCompletionTimes)
 	for _, gapEntry := range gapEntries {
 		gapTotal = gapTotal + gapEntry.gap
 	}
 
-	return gapTotal, true
+	return gapTotal, !abort
 }
 
 func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -90,13 +90,13 @@ func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Req
 	succeedCondition := pr.Status.GetCondition(apis.ConditionSucceeded)
 	if succeedCondition != nil && !succeedCondition.IsUnknown() {
 		gapTotal, foundGaps := r.accumulateGaps(pr, r.client, ctx)
-		status := SUCCEEDED
-		if succeedCondition.IsFalse() {
-			status = FAILED
-		}
-		labels := map[string]string{NS_LABEL: pr.Namespace, STATUS_LABEL: status}
-		totalDuration := float64(pr.Status.CompletionTime.Time.Sub(pr.Status.StartTime.Time).Milliseconds())
 		if foundGaps {
+			status := SUCCEEDED
+			if succeedCondition.IsFalse() {
+				status = FAILED
+			}
+			labels := map[string]string{NS_LABEL: pr.Namespace, STATUS_LABEL: status}
+			totalDuration := float64(pr.Status.CompletionTime.Time.Sub(pr.Status.StartTime.Time).Milliseconds())
 			if !filter(gapTotal, totalDuration) {
 				overhead := gapTotal / totalDuration
 				log.V(4).Info(fmt.Sprintf("registering execution metric for %s with gap %v and total %v and overhead %v",
@@ -106,16 +106,16 @@ func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Req
 				log.V(4).Info(fmt.Sprintf("filtering execution metric for %s with gap %v and total %v",
 					request.NamespacedName.String(), gapTotal, totalDuration))
 			}
-		}
-		scheduleDuration := calculateScheduledDuration(pr.CreationTimestamp.Time, pr.Status.StartTime.Time)
-		if !filter(scheduleDuration, totalDuration) {
-			overhead := scheduleDuration / totalDuration
-			log.V(4).Info(fmt.Sprintf("registering scheduling metric for %s with gap %v and total %v and overhead %v",
-				request.NamespacedName.String(), scheduleDuration, totalDuration, overhead))
-			r.collector.scheduling.With(labels).Observe(overhead)
-		} else {
-			log.V(4).Info(fmt.Sprintf("filtering scheduling metric for %s with gap %v and total %v",
-				request.NamespacedName.String(), scheduleDuration, totalDuration))
+			scheduleDuration := calculateScheduledDuration(pr.CreationTimestamp.Time, pr.Status.StartTime.Time)
+			if !filter(scheduleDuration, totalDuration) {
+				overhead := scheduleDuration / totalDuration
+				log.V(4).Info(fmt.Sprintf("registering scheduling metric for %s with gap %v and total %v and overhead %v",
+					request.NamespacedName.String(), scheduleDuration, totalDuration, overhead))
+				r.collector.scheduling.With(labels).Observe(overhead)
+			} else {
+				log.V(4).Info(fmt.Sprintf("filtering scheduling metric for %s with gap %v and total %v",
+					request.NamespacedName.String(), scheduleDuration, totalDuration))
+			}
 		}
 	}
 	return reconcile.Result{}, nil

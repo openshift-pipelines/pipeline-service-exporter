@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"testing"
 )
@@ -94,5 +95,51 @@ func TestReconcileOverhead_Reconcile(t *testing.T) {
 		assert.Equal(t, *metric.Histogram.SampleCount, uint64(0))
 
 	}
+	metrics.Registry.Unregister(overheadReconciler.collector.execution)
+	metrics.Registry.Unregister(overheadReconciler.collector.scheduling)
+
+}
+
+func TestReconcileOverhead_Reconcile_MissingTaskRuns(t *testing.T) {
+	// rather than using golang mocks, grabbed actual RHTAP pipelinerun/taskruns from staging
+	// to drive the gap metric, given its trickiness
+	objs := []client.Object{}
+	scheme := runtime.NewScheme()
+	_ = v1.AddToScheme(scheme)
+	_ = v1beta1.AddToScheme(scheme)
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
+	overheadReconciler := &ReconcileOverhead{
+		client:    c,
+		collector: NewOverheadCollector(),
+	}
+	var err error
+	// first we test with the samples pulled from actual RHTAP yaml to best capture the parallel task executions
+	prs := []v1beta1.PipelineRun{}
+	prs, err = pipelineRunFromActualRHTAPYaml()
+	if err != nil {
+		t.Fatalf(fmt.Sprintf("%s", err.Error()))
+	}
+	// but in this test we make sure no stats are generated if the taskruns are missing
+
+	ctx := context.TODO()
+	for _, prv1beta1 := range prs {
+		// mimic what the tekton conversion webhook will do
+		pr := &v1.PipelineRun{}
+		err = prv1beta1.ConvertTo(ctx, pr)
+		assert.NoError(t, err)
+		err = c.Create(ctx, pr)
+		assert.NoError(t, err)
+		request := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: pr.Namespace,
+				Name:      pr.Name,
+			},
+		}
+		_, err = overheadReconciler.Reconcile(ctx, request)
+		label := prometheus.Labels{NS_LABEL: pr.Namespace, STATUS_LABEL: SUCCEEDED}
+		validateHistogramVecZeroCount(t, overheadReconciler.collector.execution, label)
+	}
+	metrics.Registry.Unregister(overheadReconciler.collector.execution)
+	metrics.Registry.Unregister(overheadReconciler.collector.scheduling)
 
 }

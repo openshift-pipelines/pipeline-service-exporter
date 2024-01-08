@@ -121,7 +121,7 @@ func prNotDoneOrHasNoKids(pr *v1.PipelineRun) bool {
 	return false
 }
 
-func sortTaskRunsForGapCalculations(pr *v1.PipelineRun, oc client.Client, ctx context.Context) ([]*v1.TaskRun, []*v1.TaskRun) {
+func sortTaskRunsForGapCalculations(pr *v1.PipelineRun, oc client.Client, ctx context.Context) ([]*v1.TaskRun, []*v1.TaskRun, bool) {
 	sortedTaskRunsByCreateTimes := []*v1.TaskRun{}
 	reverseOrderSortedTaskRunsByCompletionTimes := []*v1.TaskRun{}
 	// prior testing in staging proved that with enough concurrency, this array is minimally not sorted based on when
@@ -136,7 +136,7 @@ func sortTaskRunsForGapCalculations(pr *v1.PipelineRun, oc client.Client, ctx co
 		err := oc.Get(ctx, types.NamespacedName{Namespace: pr.Namespace, Name: kidRef.Name}, kid)
 		if err != nil {
 			ctrl.Log.Info(fmt.Sprintf("could not calculate gap for taskrun %s:%s: %s", pr.Namespace, kidRef.Name, err.Error()))
-			continue
+			return nil, nil, true
 		}
 
 		sortedTaskRunsByCreateTimes = append(sortedTaskRunsByCreateTimes, kid)
@@ -153,7 +153,7 @@ func sortTaskRunsForGapCalculations(pr *v1.PipelineRun, oc client.Client, ctx co
 	sort.SliceStable(reverseOrderSortedTaskRunsByCompletionTimes, func(i, j int) bool {
 		return reverseOrderSortedTaskRunsByCompletionTimes[i].Status.CompletionTime.Time.After(reverseOrderSortedTaskRunsByCompletionTimes[j].Status.CompletionTime.Time)
 	})
-	return sortedTaskRunsByCreateTimes, reverseOrderSortedTaskRunsByCompletionTimes
+	return sortedTaskRunsByCreateTimes, reverseOrderSortedTaskRunsByCompletionTimes, false
 }
 
 type GapEntry struct {

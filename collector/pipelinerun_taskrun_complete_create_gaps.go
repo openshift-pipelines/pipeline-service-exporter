@@ -120,7 +120,11 @@ func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1.PipelineRun, oc 
 		return
 	}
 
-	sortedTaskRunsByCreateTimes, reverseOrderSortedTaskRunsByCompletionTimes := sortTaskRunsForGapCalculations(pr, oc, ctx)
+	sortedTaskRunsByCreateTimes, reverseOrderSortedTaskRunsByCompletionTimes, abort := sortTaskRunsForGapCalculations(pr, oc, ctx)
+
+	if abort {
+		return
+	}
 
 	prRef := pipelineRunPipelineRef(pr)
 	gapEntries := calculateGaps(ctx, pr, oc, sortedTaskRunsByCreateTimes, reverseOrderSortedTaskRunsByCompletionTimes)
