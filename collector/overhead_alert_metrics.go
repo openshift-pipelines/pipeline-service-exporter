@@ -56,9 +56,9 @@ func NewOverheadCollector() *OverheadCollector {
 	return collector
 }
 
-func (r *ReconcileOverhead) accumulateGaps(pr *v1.PipelineRun, oc client.Client, ctx context.Context) (float64, bool) {
+func (r *ReconcileOverhead) accumulateGaps(pr *v1.PipelineRun, oc client.Client, ctx context.Context) (float64, []GapEntry, bool) {
 	if prNotDoneOrHasNoKids(pr) {
-		return float64(0), false
+		return float64(0), []GapEntry{}, false
 	}
 	gapTotal := float64(0)
 
@@ -69,7 +69,7 @@ func (r *ReconcileOverhead) accumulateGaps(pr *v1.PipelineRun, oc client.Client,
 		gapTotal = gapTotal + gapEntry.gap
 	}
 
-	return gapTotal, !abort
+	return gapTotal, gapEntries, !abort
 }
 
 func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -89,7 +89,7 @@ func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Req
 	}
 	succeedCondition := pr.Status.GetCondition(apis.ConditionSucceeded)
 	if succeedCondition != nil && !succeedCondition.IsUnknown() {
-		gapTotal, foundGaps := r.accumulateGaps(pr, r.client, ctx)
+		gapTotal, gapEntries, foundGaps := r.accumulateGaps(pr, r.client, ctx)
 		if foundGaps {
 			status := SUCCEEDED
 			if succeedCondition.IsFalse() {
@@ -101,6 +101,14 @@ func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Req
 				overhead := gapTotal / totalDuration
 				log.V(4).Info(fmt.Sprintf("registering execution metric for %s with gap %v and total %v and overhead %v",
 					request.NamespacedName.String(), gapTotal, totalDuration, overhead))
+				if overhead >= ALERT_RATIO {
+					dbgStr := fmt.Sprintf("PipelineRun %s:%s has alert level execution overhead with a value of %v where gapTotal %v and totalDuration %v and individual gaps: \n", pr.Namespace, pr.Name, overhead, gapTotal, totalDuration)
+					for _, ge := range gapEntries {
+						s := fmt.Sprintf("  start %s end %s status %s gap %v\n", ge.completed, ge.upcoming, ge.status, ge.gap)
+						dbgStr = dbgStr + s
+					}
+					log.Info(dbgStr)
+				}
 				r.collector.execution.With(labels).Observe(overhead)
 			} else {
 				log.V(4).Info(fmt.Sprintf("filtering execution metric for %s with gap %v and total %v",

@@ -35,6 +35,7 @@ import (
 const (
 	FILTER_THRESHOLD                    = "FILTER_THRESHOLD"
 	DEFAULT_THRESHOLD                   = float64(300000) // 5 minutes in milliseconds
+	ALERT_RATIO                         = float64(0.05)
 	ENABLE_GAP_METRIC_ADDITIONAL_LABELS = "ENABLE_GAP_METRIC_ADDITIONAL_LABELS"
 	NS_LABEL                            = "namespace"
 	PIPELINE_NAME_LABEL                 = "pipelinename"
