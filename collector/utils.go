@@ -218,8 +218,10 @@ func calculateGaps(ctx context.Context, pr *v1.PipelineRun, oc client.Client, so
 		// get whatever completed first
 		timeToCalculateWith := time.Time{}
 		trToCalculateWith := &v1.TaskRun{}
+		completedID := prRef
 		if len(reverseOrderSortedTaskRunsByCompletionTimes) > 0 {
 			trToCalculateWith = reverseOrderSortedTaskRunsByCompletionTimes[len(reverseOrderSortedTaskRunsByCompletionTimes)-1]
+			completedID = taskRef(trToCalculateWith.Labels)
 			timeToCalculateWith = trToCalculateWith.Status.CompletionTime.Time
 		} else {
 			// if no taskruns completed, that means any taskruns created were created as part of the initial pipelinerun creation,
@@ -234,13 +236,14 @@ func calculateGaps(ctx context.Context, pr *v1.PipelineRun, oc client.Client, so
 			if !tr2.Status.CompletionTime.Time.After(tr.CreationTimestamp.Time) {
 				ctrl.Log.V(4).Info(fmt.Sprintf("%s did not complete after so use it to compute gap for current task %s", taskRef(tr2.Labels), taskRef(tr.Labels)))
 				trToCalculateWith = tr2
+				completedID = taskRef(trToCalculateWith.Labels)
 				timeToCalculateWith = tr2.Status.CompletionTime.Time
 				break
 			}
 			ctrl.Log.V(4).Info(fmt.Sprintf("skipping %s as a gap candidate for current task %s is OK", taskRef(tr2.Labels), taskRef(tr.Labels)))
 		}
 		gapEntry.gap = float64(tr.CreationTimestamp.Time.Sub(timeToCalculateWith).Milliseconds())
-		gapEntry.completed = taskRef(trToCalculateWith.Labels)
+		gapEntry.completed = completedID
 		gapEntry.upcoming = taskRef(tr.Labels)
 		gapEntries = append(gapEntries, gapEntry)
 	}
