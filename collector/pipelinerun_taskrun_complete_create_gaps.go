@@ -116,7 +116,7 @@ func (r *ReconcilePipelineRunTaskRunGap) Reconcile(ctx context.Context, request 
 }
 
 func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1.PipelineRun, oc client.Client, ctx context.Context) {
-	if prNotDoneOrHasNoKids(pr) {
+	if skipPipelineRun(pr) {
 		return
 	}
 

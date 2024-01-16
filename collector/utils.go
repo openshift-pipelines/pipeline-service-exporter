@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	"github.com/tektoncd/pipeline/pkg/pod"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
 	"os"
@@ -45,6 +48,7 @@ const (
 	STATUS_LABEL                        = "status"
 	SUCCEEDED                           = "succeded"
 	FAILED                              = "failed"
+	THROTTLED_LABEL                     = "pipelineservice.appstudio.io/throttled"
 )
 
 func pipelineRunPipelineRef(pr *v1.PipelineRun) string {
@@ -110,13 +114,21 @@ func calculateScheduledDuration(created, started time.Time) float64 {
 	return float64(started.Sub(created).Milliseconds())
 }
 
-func prNotDoneOrHasNoKids(pr *v1.PipelineRun) bool {
+func skipPipelineRun(pr *v1.PipelineRun) bool {
 	if len(pr.Status.ChildReferences) < 1 {
 		return true
 	}
 	// in case there are gaps between a pipelinerun being marked done but the complete timestamp is not set, with the
 	// understanding that the complete timestamp is not processed before any completed taskrun complete timestamps have been processed
 	if pr.Status.CompletionTime == nil {
+		return true
+	}
+
+	// we've seen a few times now that quota/node throttling artificially inflates our execution overhead,
+	// vs. concurrency contention in our controller;
+	// with our separate throttle metrics, we can alert on those if need be
+	_, throttled := pr.Labels[THROTTLED_LABEL]
+	if throttled {
 		return true
 	}
 	return false
@@ -155,6 +167,47 @@ func sortTaskRunsForGapCalculations(pr *v1.PipelineRun, oc client.Client, ctx co
 		return reverseOrderSortedTaskRunsByCompletionTimes[i].Status.CompletionTime.Time.After(reverseOrderSortedTaskRunsByCompletionTimes[j].Status.CompletionTime.Time)
 	})
 	return sortedTaskRunsByCreateTimes, reverseOrderSortedTaskRunsByCompletionTimes, false
+}
+
+func tagPipelineRunsWithTaskRunsGettingThrottled(pr *v1.PipelineRun, oc client.Client, ctx context.Context) error {
+	throttled := false
+	throttledTaskRun := ""
+	for _, kidRef := range pr.Status.ChildReferences {
+		if kidRef.Kind != "TaskRun" {
+			continue
+		}
+		kid := &v1.TaskRun{}
+		err := oc.Get(ctx, types.NamespacedName{Namespace: pr.Namespace, Name: kidRef.Name}, kid)
+		if err != nil && !errors.IsNotFound(err) {
+			ctrl.Log.Info(fmt.Sprintf("could get taskrun %s:%s: %s", pr.Namespace, kidRef.Name, err.Error()))
+			return err
+		}
+		succeedCondition := kid.Status.GetCondition(apis.ConditionSucceeded)
+		if succeedCondition != nil && succeedCondition.Status == corev1.ConditionUnknown {
+			switch succeedCondition.Reason {
+			case pod.ReasonExceededResourceQuota:
+				throttled = true
+				throttledTaskRun = kid.Name
+				break
+			case pod.ReasonExceededNodeResources:
+				throttled = true
+				throttledTaskRun = kid.Name
+				break
+			}
+		}
+	}
+	if throttled {
+		changedPR := pr.DeepCopy()
+		if changedPR.Labels == nil {
+			changedPR.Labels = map[string]string{}
+		}
+		changedPR.Labels[THROTTLED_LABEL] = throttledTaskRun
+		err := oc.Patch(ctx, changedPR, client.MergeFrom(pr))
+		if err != nil && errors.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
 }
 
 type GapEntry struct {

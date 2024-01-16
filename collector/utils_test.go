@@ -1,14 +1,22 @@
 package collector
 
 import (
+	"context"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/pod"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 )
 
@@ -221,6 +229,236 @@ func TestTaskRef(t *testing.T) {
 		ret := taskRef(test.labels)
 		if ret != test.expectedReturn {
 			t.Errorf("test %s expected %s got %s", test.name, test.expectedReturn, ret)
+		}
+	}
+}
+
+func TestDetectThrottledPipelineRun(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		expectLabel bool
+		pr          *v1.PipelineRun
+		trs         []v1.TaskRun
+	}{
+		{
+			name: "succeeded",
+			pr: &v1.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test1",
+					Namespace: "test1",
+				},
+				Status: v1.PipelineRunStatus{
+					PipelineRunStatusFields: v1.PipelineRunStatusFields{
+						ChildReferences: []v1.ChildStatusReference{
+							{
+								TypeMeta: runtime.TypeMeta{
+									Kind: "TaskRun",
+								},
+								Name: "test1",
+							},
+						},
+					},
+				},
+			},
+			trs: []v1.TaskRun{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test1",
+						Namespace: "test1",
+					},
+					Status: v1.TaskRunStatus{
+						Status: duckv1.Status{
+							Conditions: duckv1.Conditions{
+								{
+									Type:   "Succeeded",
+									Status: corev1.ConditionTrue,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "failed",
+			pr: &v1.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test1",
+					Namespace: "test1",
+				},
+				Status: v1.PipelineRunStatus{
+					PipelineRunStatusFields: v1.PipelineRunStatusFields{
+						ChildReferences: []v1.ChildStatusReference{
+							{
+								TypeMeta: runtime.TypeMeta{
+									Kind: "TaskRun",
+								},
+								Name: "test1",
+							},
+						},
+					},
+				},
+			},
+			trs: []v1.TaskRun{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test1",
+						Namespace: "test1",
+					},
+					Status: v1.TaskRunStatus{
+						Status: duckv1.Status{
+							Conditions: duckv1.Conditions{
+								{
+									Type:   "Succeeded",
+									Status: corev1.ConditionFalse,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "running but not throttled",
+			pr: &v1.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test1",
+					Namespace: "test1",
+				},
+				Status: v1.PipelineRunStatus{
+					PipelineRunStatusFields: v1.PipelineRunStatusFields{
+						ChildReferences: []v1.ChildStatusReference{
+							{
+								TypeMeta: runtime.TypeMeta{
+									Kind: "TaskRun",
+								},
+								Name: "test1",
+							},
+						},
+					},
+				},
+			},
+			trs: []v1.TaskRun{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test1",
+						Namespace: "test1",
+					},
+					Status: v1.TaskRunStatus{
+						Status: duckv1.Status{
+							Conditions: duckv1.Conditions{
+								{
+									Type:   "Succeeded",
+									Status: corev1.ConditionUnknown,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:        "running throttled on quota",
+			expectLabel: true,
+			pr: &v1.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test1",
+					Namespace: "test1",
+				},
+				Status: v1.PipelineRunStatus{
+					PipelineRunStatusFields: v1.PipelineRunStatusFields{
+						ChildReferences: []v1.ChildStatusReference{
+							{
+								TypeMeta: runtime.TypeMeta{
+									Kind: "TaskRun",
+								},
+								Name: "test1",
+							},
+						},
+					},
+				},
+			},
+			trs: []v1.TaskRun{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test1",
+						Namespace: "test1",
+					},
+					Status: v1.TaskRunStatus{
+						Status: duckv1.Status{
+							Conditions: duckv1.Conditions{
+								{
+									Type:   "Succeeded",
+									Status: corev1.ConditionUnknown,
+									Reason: pod.ReasonExceededResourceQuota,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:        "running throttled on node",
+			expectLabel: true,
+			pr: &v1.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test1",
+					Namespace: "test1",
+				},
+				Status: v1.PipelineRunStatus{
+					PipelineRunStatusFields: v1.PipelineRunStatusFields{
+						ChildReferences: []v1.ChildStatusReference{
+							{
+								TypeMeta: runtime.TypeMeta{
+									Kind: "TaskRun",
+								},
+								Name: "test1",
+							},
+						},
+					},
+				},
+			},
+			trs: []v1.TaskRun{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test1",
+						Namespace: "test1",
+					},
+					Status: v1.TaskRunStatus{
+						Status: duckv1.Status{
+							Conditions: duckv1.Conditions{
+								{
+									Type:   "Succeeded",
+									Status: corev1.ConditionUnknown,
+									Reason: pod.ReasonExceededNodeResources,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	} {
+		objs := []client.Object{}
+		scheme := runtime.NewScheme()
+		_ = v1.AddToScheme(scheme)
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
+		ctx := context.TODO()
+		err := c.Create(ctx, test.pr)
+		assert.NoError(t, err)
+		for _, tr := range test.trs {
+			err = c.Create(ctx, &tr)
+			assert.NoError(t, err)
+		}
+		err = tagPipelineRunsWithTaskRunsGettingThrottled(test.pr, c, ctx)
+		assert.NoError(t, err)
+		pr := &v1.PipelineRun{}
+		err = c.Get(ctx, types.NamespacedName{Namespace: test.pr.Namespace, Name: test.pr.Name}, pr)
+		assert.NoError(t, err)
+		_, throttled := pr.Labels[THROTTLED_LABEL]
+		if throttled != test.expectLabel {
+			t.Errorf("test %s throttle label existence was %v but expected %v", test.name, throttled, test.expectLabel)
 		}
 	}
 }
