@@ -127,8 +127,9 @@ func skipPipelineRun(pr *v1.PipelineRun) bool {
 	// we've seen a few times now that quota/node throttling artificially inflates our execution overhead,
 	// vs. concurrency contention in our controller;
 	// with our separate throttle metrics, we can alert on those if need be
-	_, throttled := pr.Labels[THROTTLED_LABEL]
+	trName, throttled := pr.Labels[THROTTLED_LABEL]
 	if throttled {
+		ctrl.Log.Info(fmt.Sprintf("Skipping overhead for pipelinerun %s:%s because taskrun %s was throttled", pr.Namespace, pr.Name, trName))
 		return true
 	}
 	return false
@@ -179,7 +180,7 @@ func tagPipelineRunsWithTaskRunsGettingThrottled(pr *v1.PipelineRun, oc client.C
 		kid := &v1.TaskRun{}
 		err := oc.Get(ctx, types.NamespacedName{Namespace: pr.Namespace, Name: kidRef.Name}, kid)
 		if err != nil && !errors.IsNotFound(err) {
-			ctrl.Log.Info(fmt.Sprintf("could get taskrun %s:%s: %s", pr.Namespace, kidRef.Name, err.Error()))
+			ctrl.Log.Info(fmt.Sprintf("could not get taskrun %s:%s: %s", pr.Namespace, kidRef.Name, err.Error()))
 			return err
 		}
 		succeedCondition := kid.Status.GetCondition(apis.ConditionSucceeded)
@@ -196,12 +197,18 @@ func tagPipelineRunsWithTaskRunsGettingThrottled(pr *v1.PipelineRun, oc client.C
 			}
 		}
 	}
-	if throttled {
+	// for our purposes, labelling only the first throttling instances is sufficient
+	if pr.Labels == nil {
+		pr.Labels = map[string]string{}
+	}
+	_, previouslyLabelled := pr.Labels[THROTTLED_LABEL]
+	if throttled && !previouslyLabelled {
 		changedPR := pr.DeepCopy()
 		if changedPR.Labels == nil {
 			changedPR.Labels = map[string]string{}
 		}
 		changedPR.Labels[THROTTLED_LABEL] = throttledTaskRun
+		ctrl.Log.Info(fmt.Sprintf("Tagging PipelineRun %s:%s as throttled because of %s", pr.Namespace, pr.Name, throttledTaskRun))
 		err := oc.Patch(ctx, changedPR, client.MergeFrom(pr))
 		if err != nil && errors.IsNotFound(err) {
 			return err
@@ -240,12 +247,12 @@ func calculateGaps(ctx context.Context, pr *v1.PipelineRun, oc client.Client, so
 		gapEntry.pipeline = prRef
 
 		if index == 0 {
-			ctrl.Log.V(4).Info(fmt.Sprintf("first task %s for pipeline %s", taskRef(tr.Labels), prRef))
 			// our first task is simple, just work off of the pipelinerun
 			gapEntry.gap = float64(tr.CreationTimestamp.Time.Sub(pr.CreationTimestamp.Time).Milliseconds())
 			gapEntry.completed = prRef
 			gapEntry.upcoming = taskRef(tr.Labels)
 			gapEntries = append(gapEntries, gapEntry)
+			ctrl.Log.V(6).Info(fmt.Sprintf("first task %s for pipeline %s has gap %v", taskRef(tr.Labels), prRef, gapEntry.gap))
 			continue
 		}
 
@@ -285,19 +292,20 @@ func calculateGaps(ctx context.Context, pr *v1.PipelineRun, oc client.Client, so
 			if tr2.Name == tr.Name {
 				continue
 			}
-			ctrl.Log.V(4).Info(fmt.Sprintf("comparing candidate %s to current task %s", taskRef(tr2.Labels), taskRef(tr.Labels)))
+			ctrl.Log.V(8).Info(fmt.Sprintf("comparing candidate %s to current task %s", taskRef(tr2.Labels), taskRef(tr.Labels)))
 			if !tr2.Status.CompletionTime.Time.After(tr.CreationTimestamp.Time) {
-				ctrl.Log.V(4).Info(fmt.Sprintf("%s did not complete after so use it to compute gap for current task %s", taskRef(tr2.Labels), taskRef(tr.Labels)))
+				ctrl.Log.V(8).Info(fmt.Sprintf("%s did not complete after so use it to compute gap for current task %s", taskRef(tr2.Labels), taskRef(tr.Labels)))
 				trToCalculateWith = tr2
 				completedID = taskRef(trToCalculateWith.Labels)
 				timeToCalculateWith = tr2.Status.CompletionTime.Time
 				break
 			}
-			ctrl.Log.V(4).Info(fmt.Sprintf("skipping %s as a gap candidate for current task %s is OK", taskRef(tr2.Labels), taskRef(tr.Labels)))
+			ctrl.Log.V(8).Info(fmt.Sprintf("skipping %s as a gap candidate for current task %s is OK", taskRef(tr2.Labels), taskRef(tr.Labels)))
 		}
 		gapEntry.gap = float64(tr.CreationTimestamp.Time.Sub(timeToCalculateWith).Milliseconds())
 		gapEntry.completed = completedID
 		gapEntry.upcoming = taskRef(tr.Labels)
+		ctrl.Log.V(6).Info(fmt.Sprintf("gap entry completed %s upcoming %s gap %v", gapEntry.completed, gapEntry.upcoming, gapEntry.gap))
 		gapEntries = append(gapEntries, gapEntry)
 	}
 	return gapEntries
