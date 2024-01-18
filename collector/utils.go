@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	"github.com/tektoncd/pipeline/pkg/pod"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
 	"os"
@@ -45,6 +48,7 @@ const (
 	STATUS_LABEL                        = "status"
 	SUCCEEDED                           = "succeded"
 	FAILED                              = "failed"
+	THROTTLED_LABEL                     = "pipelineservice.appstudio.io/throttled"
 )
 
 func pipelineRunPipelineRef(pr *v1.PipelineRun) string {
@@ -110,13 +114,22 @@ func calculateScheduledDuration(created, started time.Time) float64 {
 	return float64(started.Sub(created).Milliseconds())
 }
 
-func prNotDoneOrHasNoKids(pr *v1.PipelineRun) bool {
+func skipPipelineRun(pr *v1.PipelineRun) bool {
 	if len(pr.Status.ChildReferences) < 1 {
 		return true
 	}
 	// in case there are gaps between a pipelinerun being marked done but the complete timestamp is not set, with the
 	// understanding that the complete timestamp is not processed before any completed taskrun complete timestamps have been processed
 	if pr.Status.CompletionTime == nil {
+		return true
+	}
+
+	// we've seen a few times now that quota/node throttling artificially inflates our execution overhead,
+	// vs. concurrency contention in our controller;
+	// with our separate throttle metrics, we can alert on those if need be
+	trName, throttled := pr.Labels[THROTTLED_LABEL]
+	if throttled {
+		ctrl.Log.Info(fmt.Sprintf("Skipping overhead for pipelinerun %s:%s because taskrun %s was throttled", pr.Namespace, pr.Name, trName))
 		return true
 	}
 	return false
@@ -157,6 +170,53 @@ func sortTaskRunsForGapCalculations(pr *v1.PipelineRun, oc client.Client, ctx co
 	return sortedTaskRunsByCreateTimes, reverseOrderSortedTaskRunsByCompletionTimes, false
 }
 
+func tagPipelineRunsWithTaskRunsGettingThrottled(pr *v1.PipelineRun, oc client.Client, ctx context.Context) error {
+	throttled := false
+	throttledTaskRun := ""
+	for _, kidRef := range pr.Status.ChildReferences {
+		if kidRef.Kind != "TaskRun" {
+			continue
+		}
+		kid := &v1.TaskRun{}
+		err := oc.Get(ctx, types.NamespacedName{Namespace: pr.Namespace, Name: kidRef.Name}, kid)
+		if err != nil && !errors.IsNotFound(err) {
+			ctrl.Log.Info(fmt.Sprintf("could not get taskrun %s:%s: %s", pr.Namespace, kidRef.Name, err.Error()))
+			return err
+		}
+		succeedCondition := kid.Status.GetCondition(apis.ConditionSucceeded)
+		if succeedCondition != nil && succeedCondition.Status == corev1.ConditionUnknown {
+			switch succeedCondition.Reason {
+			case pod.ReasonExceededResourceQuota:
+				throttled = true
+				throttledTaskRun = kid.Name
+				break
+			case pod.ReasonExceededNodeResources:
+				throttled = true
+				throttledTaskRun = kid.Name
+				break
+			}
+		}
+	}
+	// for our purposes, labelling only the first throttling instances is sufficient
+	if pr.Labels == nil {
+		pr.Labels = map[string]string{}
+	}
+	_, previouslyLabelled := pr.Labels[THROTTLED_LABEL]
+	if throttled && !previouslyLabelled {
+		changedPR := pr.DeepCopy()
+		if changedPR.Labels == nil {
+			changedPR.Labels = map[string]string{}
+		}
+		changedPR.Labels[THROTTLED_LABEL] = throttledTaskRun
+		ctrl.Log.Info(fmt.Sprintf("Tagging PipelineRun %s:%s as throttled because of %s", pr.Namespace, pr.Name, throttledTaskRun))
+		err := oc.Patch(ctx, changedPR, client.MergeFrom(pr))
+		if err != nil && errors.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
+}
+
 type GapEntry struct {
 	status    string
 	pipeline  string
@@ -187,12 +247,12 @@ func calculateGaps(ctx context.Context, pr *v1.PipelineRun, oc client.Client, so
 		gapEntry.pipeline = prRef
 
 		if index == 0 {
-			ctrl.Log.V(4).Info(fmt.Sprintf("first task %s for pipeline %s", taskRef(tr.Labels), prRef))
 			// our first task is simple, just work off of the pipelinerun
 			gapEntry.gap = float64(tr.CreationTimestamp.Time.Sub(pr.CreationTimestamp.Time).Milliseconds())
 			gapEntry.completed = prRef
 			gapEntry.upcoming = taskRef(tr.Labels)
 			gapEntries = append(gapEntries, gapEntry)
+			ctrl.Log.V(6).Info(fmt.Sprintf("first task %s for pipeline %s has gap %v", taskRef(tr.Labels), prRef, gapEntry.gap))
 			continue
 		}
 
@@ -232,19 +292,20 @@ func calculateGaps(ctx context.Context, pr *v1.PipelineRun, oc client.Client, so
 			if tr2.Name == tr.Name {
 				continue
 			}
-			ctrl.Log.V(4).Info(fmt.Sprintf("comparing candidate %s to current task %s", taskRef(tr2.Labels), taskRef(tr.Labels)))
+			ctrl.Log.V(8).Info(fmt.Sprintf("comparing candidate %s to current task %s", taskRef(tr2.Labels), taskRef(tr.Labels)))
 			if !tr2.Status.CompletionTime.Time.After(tr.CreationTimestamp.Time) {
-				ctrl.Log.V(4).Info(fmt.Sprintf("%s did not complete after so use it to compute gap for current task %s", taskRef(tr2.Labels), taskRef(tr.Labels)))
+				ctrl.Log.V(8).Info(fmt.Sprintf("%s did not complete after so use it to compute gap for current task %s", taskRef(tr2.Labels), taskRef(tr.Labels)))
 				trToCalculateWith = tr2
 				completedID = taskRef(trToCalculateWith.Labels)
 				timeToCalculateWith = tr2.Status.CompletionTime.Time
 				break
 			}
-			ctrl.Log.V(4).Info(fmt.Sprintf("skipping %s as a gap candidate for current task %s is OK", taskRef(tr2.Labels), taskRef(tr.Labels)))
+			ctrl.Log.V(8).Info(fmt.Sprintf("skipping %s as a gap candidate for current task %s is OK", taskRef(tr2.Labels), taskRef(tr.Labels)))
 		}
 		gapEntry.gap = float64(tr.CreationTimestamp.Time.Sub(timeToCalculateWith).Milliseconds())
 		gapEntry.completed = completedID
 		gapEntry.upcoming = taskRef(tr.Labels)
+		ctrl.Log.V(6).Info(fmt.Sprintf("gap entry completed %s upcoming %s gap %v", gapEntry.completed, gapEntry.upcoming, gapEntry.gap))
 		gapEntries = append(gapEntries, gapEntry)
 	}
 	return gapEntries

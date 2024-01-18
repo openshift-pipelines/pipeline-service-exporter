@@ -110,13 +110,13 @@ func (r *ReconcilePipelineRunTaskRunGap) Reconcile(ctx context.Context, request 
 	}
 
 	// based on our WithEventFilter we should only be getting called with the start time is set
-	log.V(4).Info(fmt.Sprintf("recording taskrun gap for %q", request.NamespacedName))
+	log.V(8).Info(fmt.Sprintf("recording taskrun gap for %q", request.NamespacedName))
 	r.prCollector.bumpGapDuration(pr, r.client, ctx)
 	return reconcile.Result{}, nil
 }
 
 func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1.PipelineRun, oc client.Client, ctx context.Context) {
-	if prNotDoneOrHasNoKids(pr) {
+	if skipPipelineRun(pr) {
 		return
 	}
 

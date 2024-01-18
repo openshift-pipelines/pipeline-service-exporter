@@ -57,12 +57,16 @@ func NewOverheadCollector() *OverheadCollector {
 }
 
 func (r *ReconcileOverhead) accumulateGaps(pr *v1.PipelineRun, oc client.Client, ctx context.Context) (float64, []GapEntry, bool) {
-	if prNotDoneOrHasNoKids(pr) {
+	if skipPipelineRun(pr) {
 		return float64(0), []GapEntry{}, false
 	}
 	gapTotal := float64(0)
 
 	sortedTaskRunsByCreateTimes, reverseOrderSortedTaskRunsByCompletionTimes, abort := sortTaskRunsForGapCalculations(pr, oc, ctx)
+
+	if abort {
+		return float64(0), []GapEntry{}, false
+	}
 
 	gapEntries := calculateGaps(ctx, pr, oc, sortedTaskRunsByCreateTimes, reverseOrderSortedTaskRunsByCompletionTimes)
 	for _, gapEntry := range gapEntries {
@@ -124,6 +128,8 @@ func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Req
 				log.V(4).Info(fmt.Sprintf("filtering scheduling metric for %s with gap %v and total %v",
 					request.NamespacedName.String(), scheduleDuration, totalDuration))
 			}
+		} else {
+			return reconcile.Result{}, tagPipelineRunsWithTaskRunsGettingThrottled(pr, r.client, ctx)
 		}
 	}
 	return reconcile.Result{}, nil
