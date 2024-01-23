@@ -126,7 +126,8 @@ func skipPipelineRun(pr *v1.PipelineRun) bool {
 
 	// we've seen a few times now that quota/node throttling artificially inflates our execution overhead,
 	// vs. concurrency contention in our controller;
-	// with our separate throttle metrics, we can alert on those if need be
+	// with our separate throttle metrics, we can alert on those if need be; our controller runtime filter
+	// should prevent a Reconcile when this label is set, but just in case, let's check here as well
 	trName, throttled := pr.Labels[THROTTLED_LABEL]
 	if throttled {
 		ctrl.Log.Info(fmt.Sprintf("Skipping overhead for pipelinerun %s:%s because taskrun %s was throttled", pr.Namespace, pr.Name, trName))
@@ -170,18 +171,19 @@ func sortTaskRunsForGapCalculations(pr *v1.PipelineRun, oc client.Client, ctx co
 	return sortedTaskRunsByCreateTimes, reverseOrderSortedTaskRunsByCompletionTimes, false
 }
 
-func tagPipelineRunsWithTaskRunsGettingThrottled(pr *v1.PipelineRun, oc client.Client, ctx context.Context) error {
+func isPipelineRunThrottled(pr *v1.PipelineRun, oc client.Client, ctx context.Context) (bool, string, error) {
 	throttled := false
 	throttledTaskRun := ""
+	var err error
 	for _, kidRef := range pr.Status.ChildReferences {
 		if kidRef.Kind != "TaskRun" {
 			continue
 		}
 		kid := &v1.TaskRun{}
-		err := oc.Get(ctx, types.NamespacedName{Namespace: pr.Namespace, Name: kidRef.Name}, kid)
+		err = oc.Get(ctx, types.NamespacedName{Namespace: pr.Namespace, Name: kidRef.Name}, kid)
 		if err != nil && !errors.IsNotFound(err) {
 			ctrl.Log.Info(fmt.Sprintf("could not get taskrun %s:%s: %s", pr.Namespace, kidRef.Name, err.Error()))
-			return err
+			return false, "", err
 		}
 		succeedCondition := kid.Status.GetCondition(apis.ConditionSucceeded)
 		if succeedCondition != nil && succeedCondition.Status == corev1.ConditionUnknown {
@@ -196,6 +198,14 @@ func tagPipelineRunsWithTaskRunsGettingThrottled(pr *v1.PipelineRun, oc client.C
 				break
 			}
 		}
+	}
+	return throttled, throttledTaskRun, nil
+}
+
+func tagPipelineRunsWithTaskRunsGettingThrottled(pr *v1.PipelineRun, oc client.Client, ctx context.Context) error {
+	throttled, throttledTaskRun, err := isPipelineRunThrottled(pr, oc, ctx)
+	if err != nil {
+		return err
 	}
 	// for our purposes, labelling only the first throttling instances is sufficient
 	if pr.Labels == nil {
