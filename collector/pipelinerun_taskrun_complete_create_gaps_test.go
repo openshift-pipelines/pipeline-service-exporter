@@ -246,7 +246,7 @@ func TestPipelineRunGapCollection_MissingTaskRuns(t *testing.T) {
 }
 
 func TestTaskRunGapEventFilter_Update(t *testing.T) {
-	filter := &taskRunGapEventFilter{}
+	filterObj := &taskRunGapEventFilter{}
 	for _, tc := range []struct {
 		name       string
 		oldPR      *v1.PipelineRun
@@ -340,7 +340,7 @@ func TestTaskRunGapEventFilter_Update(t *testing.T) {
 			ObjectOld: tc.oldPR,
 			ObjectNew: tc.newPR,
 		}
-		rc := filter.Update(ev)
+		rc := filterObj.Update(ev)
 		if rc != tc.expectedRC {
 			t.Errorf(fmt.Sprintf("tc %s expected %v but got %v", tc.name, tc.expectedRC, rc))
 		}

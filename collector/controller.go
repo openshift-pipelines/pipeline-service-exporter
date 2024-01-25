@@ -64,10 +64,6 @@ func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
 	if err := pipelinev1.AddToScheme(options.Scheme); err != nil {
 		return nil, err
 	}
-	options.NewCache = cache.BuilderWithOptions(cache.Options{
-		SelectorsByObject: cache.SelectorsByObject{
-			&pipelinev1.PipelineRun{}: {},
-		}})
 
 	var mgr ctrl.Manager
 	var err error
@@ -79,6 +75,8 @@ func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
 	}
 	podSelector := labels.NewSelector().Add(*labelReq)
 	selectors := cache.SelectorsByObject{
+		&pipelinev1.PipelineRun{}: {},
+		&pipelinev1.TaskRun{}:     {},
 		&corev1.Pod{}: cache.ObjectSelector{
 			Label: podSelector,
 		},

@@ -12,6 +12,7 @@ import (
 	"knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -24,7 +25,7 @@ func SetupOverheadController(mgr ctrl.Manager) error {
 		eventRecorder: mgr.GetEventRecorderFor("MetricExporterExecutionOverhead"),
 		collector:     NewOverheadCollector(),
 	}
-	return ctrl.NewControllerManagedBy(mgr).For(&v1.PipelineRun{}).WithEventFilter(&taskRunGapEventFilter{}).Complete(reconciler)
+	return ctrl.NewControllerManagedBy(mgr).For(&v1.PipelineRun{}).WithEventFilter(&overheadGapEventFilter{client: reconciler.client}).Complete(reconciler)
 }
 
 type OverheadCollector struct {
@@ -39,6 +40,56 @@ type ReconcileOverhead struct {
 	collector     *OverheadCollector
 }
 
+type overheadGapEventFilter struct {
+	client client.Client
+}
+
+func (f *overheadGapEventFilter) Create(event.CreateEvent) bool {
+	return false
+}
+
+func (f *overheadGapEventFilter) Delete(event.DeleteEvent) bool {
+	return false
+}
+
+func (f *overheadGapEventFilter) Update(e event.UpdateEvent) bool {
+
+	oldPR, okold := e.ObjectOld.(*v1.PipelineRun)
+	newPR, oknew := e.ObjectNew.(*v1.PipelineRun)
+	// the real-time filtering involes retrieving the taskruns that are childs of this pipelinerun, so we only
+	// calculate when the pipelinerun transtions to done, and then compare the kinds; note - do not need to check for cancel,
+	// as eventually those PRs will be marked done once any running TRs are done
+	if okold && oknew {
+		_, throttled := newPR.Labels[THROTTLED_LABEL]
+		// if this pipelinerun endured throttling while running, given the requeue'ing the pipeline controller unfortunately entails,
+		// we are punting on calculating overhead at this time
+		if throttled {
+			return false
+		}
+		// NOTE: confirmed that the succeeded condition is marked done and the completion timestamp is set at the same time
+		if !oldPR.IsDone() && newPR.IsDone() {
+			return true
+		}
+		// checking here to bypass the throttle check
+		if oldPR.IsDone() && newPR.IsDone() {
+			return false
+		}
+
+		// if we are newly throttled, reconcile so we can set our label and filter this entry, at least for now, from
+		// our execution overhead,
+		ctx := context.Background()
+		oldThrottled, _, _ := isPipelineRunThrottled(oldPR, f.client, ctx)
+		newThrottled, _, _ := isPipelineRunThrottled(newPR, f.client, ctx)
+		if !oldThrottled && newThrottled {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *overheadGapEventFilter) Generic(event.GenericEvent) bool {
+	return false
+}
 func NewOverheadCollector() *OverheadCollector {
 	labelNames := []string{NS_LABEL, STATUS_LABEL}
 	executionMetric := prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -128,9 +179,10 @@ func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Req
 				log.V(4).Info(fmt.Sprintf("filtering scheduling metric for %s with gap %v and total %v",
 					request.NamespacedName.String(), scheduleDuration, totalDuration))
 			}
-		} else {
-			return reconcile.Result{}, tagPipelineRunsWithTaskRunsGettingThrottled(pr, r.client, ctx)
 		}
+	} else {
+		// if still running, we set the label here instead of in the filter so we can retry on error if need be
+		return reconcile.Result{}, tagPipelineRunsWithTaskRunsGettingThrottled(pr, r.client, ctx)
 	}
 	return reconcile.Result{}, nil
 

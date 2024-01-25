@@ -9,18 +9,244 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	"github.com/tektoncd/pipeline/pkg/pod"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"testing"
 	"time"
 )
+
+func TestOverheadGapEventFilter_Update(t *testing.T) {
+	objs := []client.Object{}
+	scheme := runtime.NewScheme()
+	_ = v1.AddToScheme(scheme)
+	_ = v1beta1.AddToScheme(scheme)
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
+	filterObj := &overheadGapEventFilter{client: c}
+	for _, tc := range []struct {
+		name       string
+		oldPR      *v1.PipelineRun
+		newPR      *v1.PipelineRun
+		newTRs     []*v1.TaskRun
+		expectedRC bool
+	}{
+		{
+			name:  "not done no status",
+			oldPR: &v1.PipelineRun{},
+			newPR: &v1.PipelineRun{},
+		},
+		{
+			name:  "not done status unknown",
+			oldPR: &v1.PipelineRun{},
+			newPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
+					Status: duckv1.Status{
+						Conditions: []apis.Condition{
+							{
+								Type:   apis.ConditionSucceeded,
+								Status: corev1.ConditionUnknown,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "not done taskruns throttled on quota",
+			oldPR: &v1.PipelineRun{},
+			newPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
+					Status: duckv1.Status{
+						Conditions: []apis.Condition{
+							{
+								Type:   apis.ConditionSucceeded,
+								Status: corev1.ConditionUnknown,
+							},
+						},
+					},
+					PipelineRunStatusFields: v1.PipelineRunStatusFields{
+						ChildReferences: []v1.ChildStatusReference{
+							{
+								TypeMeta: runtime.TypeMeta{Kind: "TaskRun"},
+								Name:     "taskrun1",
+							},
+						},
+					},
+				},
+			},
+			newTRs: []*v1.TaskRun{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "taskrun1"},
+					Status: v1.TaskRunStatus{
+						Status: duckv1.Status{
+							Conditions: []apis.Condition{
+								{
+									Type:   apis.ConditionSucceeded,
+									Status: corev1.ConditionUnknown,
+									Reason: pod.ReasonExceededResourceQuota,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedRC: true,
+		},
+		{
+			name:  "not done taskruns throttled on node",
+			oldPR: &v1.PipelineRun{},
+			newPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
+					Status: duckv1.Status{
+						Conditions: []apis.Condition{
+							{
+								Type:   apis.ConditionSucceeded,
+								Status: corev1.ConditionUnknown,
+							},
+						},
+					},
+					PipelineRunStatusFields: v1.PipelineRunStatusFields{
+						ChildReferences: []v1.ChildStatusReference{
+							{
+								TypeMeta: runtime.TypeMeta{Kind: "TaskRun"},
+								Name:     "taskrun1",
+							},
+						},
+					},
+				},
+			},
+			newTRs: []*v1.TaskRun{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "taskrun2"},
+					Status: v1.TaskRunStatus{
+						Status: duckv1.Status{
+							Conditions: []apis.Condition{
+								{
+									Type:   apis.ConditionSucceeded,
+									Status: corev1.ConditionUnknown,
+									Reason: pod.ReasonExceededNodeResources,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedRC: true,
+		},
+		{
+			name:  "not done throttle label set",
+			oldPR: &v1.PipelineRun{},
+			newPR: &v1.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{THROTTLED_LABEL: "taskrun1"},
+				},
+				Status: v1.PipelineRunStatus{
+					Status: duckv1.Status{
+						Conditions: []apis.Condition{
+							{
+								Type:   apis.ConditionSucceeded,
+								Status: corev1.ConditionUnknown,
+							},
+						},
+					},
+					PipelineRunStatusFields: v1.PipelineRunStatusFields{
+						ChildReferences: []v1.ChildStatusReference{
+							{
+								TypeMeta: runtime.TypeMeta{Kind: "TaskRun"},
+								Name:     "taskrun1",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "just done succeed",
+			oldPR: &v1.PipelineRun{},
+			newPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
+					Status: duckv1.Status{
+						Conditions: []apis.Condition{
+							{
+								Type:   apis.ConditionSucceeded,
+								Status: corev1.ConditionTrue,
+							},
+						},
+					},
+				},
+			},
+			expectedRC: true,
+		},
+		{
+			name:  "just done failed",
+			oldPR: &v1.PipelineRun{},
+			newPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
+					Status: duckv1.Status{
+						Conditions: []apis.Condition{
+							{
+								Type:   apis.ConditionSucceeded,
+								Status: corev1.ConditionFalse,
+							},
+						},
+					},
+				},
+			},
+			expectedRC: true,
+		},
+		{
+			name: "udpate after done",
+			oldPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
+					Status: duckv1.Status{
+						Conditions: []apis.Condition{
+							{
+								Type:   apis.ConditionSucceeded,
+								Status: corev1.ConditionFalse,
+							},
+						},
+					},
+				},
+			},
+			newPR: &v1.PipelineRun{
+				Status: v1.PipelineRunStatus{
+					Status: duckv1.Status{
+						Conditions: []apis.Condition{
+							{
+								Type:   apis.ConditionSucceeded,
+								Status: corev1.ConditionFalse,
+							},
+						},
+					},
+				},
+			},
+		},
+	} {
+		ctx := context.TODO()
+		for _, tr := range tc.newTRs {
+			err := c.Create(ctx, tr)
+			assert.NoError(t, err)
+		}
+		ev := event.UpdateEvent{
+			ObjectOld: tc.oldPR,
+			ObjectNew: tc.newPR,
+		}
+		rc := filterObj.Update(ev)
+		if rc != tc.expectedRC {
+			t.Errorf(fmt.Sprintf("tc %s expected %v but got %v", tc.name, tc.expectedRC, rc))
+		}
+	}
+
+}
 
 func TestReconcileOverhead_Reconcile(t *testing.T) {
 	// rather than using golang mocks, grabbed actual RHTAP pipelinerun/taskruns from staging
@@ -319,8 +545,6 @@ func TestReconcileOverhead_Reconcile_MockWithHighOverheadButThrottled(t *testing
 	var err error
 	now := time.Now().UTC()
 
-	// then some additional unit tests were we build simpler pipelineruns/taskruns that capture paths
-	// related to completion times not being set
 	mockTaskRuns := []*v1.TaskRun{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -380,6 +604,7 @@ func TestReconcileOverhead_Reconcile_MockWithHighOverheadButThrottled(t *testing
 					Conditions: duckv1.Conditions{{
 						Type:   "Succeeded",
 						Status: corev1.ConditionUnknown,
+						Reason: pod.ReasonExceededNodeResources,
 					}},
 					Annotations: nil,
 				},
@@ -450,6 +675,10 @@ func TestReconcileOverhead_Reconcile_MockWithHighOverheadButThrottled(t *testing
 			},
 		}
 		_, err = overheadReconciler.Reconcile(ctx, request)
+		err = c.Get(ctx, types.NamespacedName{Namespace: pipelineRun.Namespace, Name: pipelineRun.Name}, pipelineRun)
+		assert.NoError(t, err)
+		_, throttled := pipelineRun.Labels[THROTTLED_LABEL]
+		assert.True(t, throttled)
 	}
 
 	label := prometheus.Labels{NS_LABEL: "test-namespace", STATUS_LABEL: SUCCEEDED}
