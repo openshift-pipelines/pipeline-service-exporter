@@ -78,9 +78,19 @@ func (f *overheadGapEventFilter) Update(e event.UpdateEvent) bool {
 		// if we are newly throttled, reconcile so we can set our label and filter this entry, at least for now, from
 		// our execution overhead,
 		ctx := context.Background()
-		oldThrottled, _, _ := isPipelineRunThrottled(oldPR, f.client, ctx)
 		newThrottled, _, _ := isPipelineRunThrottled(newPR, f.client, ctx)
-		if !oldThrottled && newThrottled {
+		// seen timing issues where both the old and new pipelineruns are throttled, where rapid, concurrent updates
+		// must have resulted in merging updates together before updating the watch, so we don't bother with a compare here;
+		// we'll check our label before retagging
+		if newThrottled {
+			return true
+		}
+
+		// also seen some timing windows where if the taskrun is throttled quickly (like on pod count), the pipelinerun may not
+		// get updated after the taskrun is throttled; so we reconcile until we have taskruns listed in the status,
+		// where then in the reconcile we can requeue if the taskruns are not at least defined and seeded in the
+		// pipelinerun
+		if !isPipelineRunGoing(newPR, f.client, ctx) {
 			return true
 		}
 	}
@@ -181,6 +191,9 @@ func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Req
 			}
 		}
 	} else {
+		if !isPipelineRunGoing(pr, r.client, ctx) {
+			return reconcile.Result{Requeue: true}, nil
+		}
 		// if still running, we set the label here instead of in the filter so we can retry on error if need be
 		return reconcile.Result{}, tagPipelineRunsWithTaskRunsGettingThrottled(pr, r.client, ctx)
 	}

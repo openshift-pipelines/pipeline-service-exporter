@@ -202,6 +202,16 @@ func isPipelineRunThrottled(pr *v1.PipelineRun, oc client.Client, ctx context.Co
 	return throttled, throttledTaskRun, nil
 }
 
+func isPipelineRunGoing(pr *v1.PipelineRun, oc client.Client, ctx context.Context) bool {
+	for _, kidRef := range pr.Status.ChildReferences {
+		if kidRef.Kind != "TaskRun" {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
 func tagPipelineRunsWithTaskRunsGettingThrottled(pr *v1.PipelineRun, oc client.Client, ctx context.Context) error {
 	throttled, throttledTaskRun, err := isPipelineRunThrottled(pr, oc, ctx)
 	if err != nil {
@@ -219,7 +229,7 @@ func tagPipelineRunsWithTaskRunsGettingThrottled(pr *v1.PipelineRun, oc client.C
 		}
 		changedPR.Labels[THROTTLED_LABEL] = throttledTaskRun
 		ctrl.Log.Info(fmt.Sprintf("Tagging PipelineRun %s:%s as throttled because of %s", pr.Namespace, pr.Name, throttledTaskRun))
-		err := oc.Patch(ctx, changedPR, client.MergeFrom(pr))
+		err = oc.Patch(ctx, changedPR, client.MergeFrom(pr))
 		if err != nil && errors.IsNotFound(err) {
 			return err
 		}

@@ -40,12 +40,13 @@ func TestOverheadGapEventFilter_Update(t *testing.T) {
 		expectedRC bool
 	}{
 		{
-			name:  "not done no status",
-			oldPR: &v1.PipelineRun{},
-			newPR: &v1.PipelineRun{},
+			name:       "not done no status, no kids",
+			oldPR:      &v1.PipelineRun{},
+			newPR:      &v1.PipelineRun{},
+			expectedRC: true,
 		},
 		{
-			name:  "not done status unknown",
+			name:  "not done status unknown, still no kids",
 			oldPR: &v1.PipelineRun{},
 			newPR: &v1.PipelineRun{
 				Status: v1.PipelineRunStatus{
@@ -59,6 +60,7 @@ func TestOverheadGapEventFilter_Update(t *testing.T) {
 					},
 				},
 			},
+			expectedRC: true,
 		},
 		{
 			name:  "not done taskruns throttled on quota",
@@ -163,6 +165,25 @@ func TestOverheadGapEventFilter_Update(t *testing.T) {
 							{
 								TypeMeta: runtime.TypeMeta{Kind: "TaskRun"},
 								Name:     "taskrun1",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "just done succeed but previously throttled",
+			oldPR: &v1.PipelineRun{},
+			newPR: &v1.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{THROTTLED_LABEL: "taskrun1"},
+				},
+				Status: v1.PipelineRunStatus{
+					Status: duckv1.Status{
+						Conditions: []apis.Condition{
+							{
+								Type:   apis.ConditionSucceeded,
+								Status: corev1.ConditionTrue,
 							},
 						},
 					},
