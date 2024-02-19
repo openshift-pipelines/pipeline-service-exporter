@@ -123,6 +123,10 @@ func (r *ReconcilePVCThrottled) resetPVCStats(ctx context.Context) {
 	for ns := range r.nsCache {
 		r.prCollector.zeroPVCThrottle(ns)
 	}
+	// however, we'll clear out cache to avoid long term accumulation, memory leak, as things like dynamically created test clusters
+	// accumulate; as long as we maintain history for permanent, active tenant namespaces, that is OK
+	r.nsCache = map[string]struct{}{}
+
 	prList := &v1.PipelineRunList{}
 	err := r.client.List(ctx, prList)
 	nsWithPVCThrottle := map[string]struct{}{}
