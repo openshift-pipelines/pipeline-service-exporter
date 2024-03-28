@@ -17,8 +17,17 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"testing"
 )
+
+func unregisterStats(r *ExporterReconcile) {
+	metrics.Registry.Unregister(r.overheadCollector.execution)
+	metrics.Registry.Unregister(r.overheadCollector.scheduling)
+	metrics.Registry.Unregister(r.prGapCollector.trGaps)
+	metrics.Registry.Unregister(r.pvcCollector.pvcThrottle)
+
+}
 
 func validateHistogramVec(t *testing.T, h *prometheus.HistogramVec, labels prometheus.Labels, checkMax bool) {
 	observer, err := h.GetMetricWith(labels)

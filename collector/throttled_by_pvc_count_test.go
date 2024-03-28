@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sync"
 	"testing"
 )
 
@@ -143,16 +142,17 @@ func TestResetPVCStats(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	pvcReconciler := &ReconcilePVCThrottled{client: c, prCollector: NewPVCThrottledCollector(), listMutex: sync.RWMutex{}, nsCache: map[string]struct{}{}}
+	pvcReconciler := buildReconciler(c, nil, nil)
 	pvcReconciler.resetPVCStats(ctx)
 	label := prometheus.Labels{NS_LABEL: "test-namespace"}
-	validateGaugeVec(t, pvcReconciler.prCollector.pvcThrottle, label, float64(2))
+	validateGaugeVec(t, pvcReconciler.pvcCollector.pvcThrottle, label, float64(2))
 	// second pass should reset and still be two
 	pvcReconciler.resetPVCStats(ctx)
-	validateGaugeVec(t, pvcReconciler.prCollector.pvcThrottle, label, float64(2))
+	validateGaugeVec(t, pvcReconciler.pvcCollector.pvcThrottle, label, float64(2))
 	// deletion, then another pass, should now be one
 	err := c.Delete(ctx, mockPipelineRuns[0])
 	assert.NoError(t, err)
 	pvcReconciler.resetPVCStats(ctx)
-	validateGaugeVec(t, pvcReconciler.prCollector.pvcThrottle, label, float64(1))
+	validateGaugeVec(t, pvcReconciler.pvcCollector.pvcThrottle, label, float64(1))
+	unregisterStats(pvcReconciler)
 }

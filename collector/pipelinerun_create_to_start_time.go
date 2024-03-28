@@ -1,30 +1,12 @@
 package collector
 
 import (
-	"context"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
 	"knative.dev/pkg/apis"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-func SetupPipelineRunScheduleDurationController(mgr ctrl.Manager) error {
-	filter := &startTimeEventFilter{
-		metric: NewPipelineRunScheduledMetric(),
-	}
-	reconciler := &ReconcilePipelineRunScheduled{
-		client:        mgr.GetClient(),
-		scheme:        mgr.GetScheme(),
-		eventRecorder: mgr.GetEventRecorderFor("MetricExporterPipelineRunsScheduled"),
-	}
-	return ctrl.NewControllerManagedBy(mgr).For(&v1.PipelineRun{}).WithEventFilter(filter).Complete(reconciler)
-}
 
 type PipelineRunScheduledCollector struct {
 	durationScheduled *prometheus.HistogramVec
@@ -60,13 +42,6 @@ func calculateScheduledDurationPipelineRun(pipelineRun *v1.PipelineRun) float64 
 	return calculateScheduledDuration(pipelineRun.CreationTimestamp.Time, pipelineRun.Status.StartTime.Time) / 1000
 }
 
-type ReconcilePipelineRunScheduled struct {
-	client        client.Client
-	scheme        *runtime.Scheme
-	eventRecorder record.EventRecorder
-	prCollector   *PipelineRunScheduledCollector
-}
-
 type startTimeEventFilter struct {
 	metric *prometheus.HistogramVec
 }
@@ -94,8 +69,4 @@ func (f *startTimeEventFilter) Update(e event.UpdateEvent) bool {
 
 func (f *startTimeEventFilter) Generic(event.GenericEvent) bool {
 	return false
-}
-
-func (r *ReconcilePipelineRunScheduled) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	return reconcile.Result{}, nil
 }

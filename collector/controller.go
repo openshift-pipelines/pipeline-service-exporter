@@ -2,6 +2,8 @@ package collector
 
 import (
 	"context"
+	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	pipelinev1client "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1"
@@ -14,8 +16,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"time"
 )
 
@@ -89,55 +97,142 @@ func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
 		return nil, err
 	}
 
-	err = SetupPipelineRunScheduleDurationController(mgr)
-	if err != nil {
-		return nil, err
-	}
-
-	err = SetupPipelineRunTaskRunGapController(mgr)
-	if err != nil {
-		return nil, err
-	}
-
-	err = SetupTaskRunScheduleDurationController(mgr)
-	if err != nil {
-		return nil, err
-	}
-
-	err = SetupPVCThrottledController(mgr)
-	if err != nil {
-		return nil, err
-	}
-
-	err = SetupPodCreateToKubeletDurationController(mgr)
-	if err != nil {
-		return nil, err
-	}
-
-	err = SetupPodKubeletToContainerStartDurationController(mgr)
-	if err != nil {
-		return nil, err
-	}
-
-	err = SetupTaskReferenceWaitTimeController(mgr)
-	if err != nil {
-		return nil, err
-	}
-
-	err = SetupPipelineReferenceWaitTimeController(mgr)
-	if err != nil {
-		return nil, err
-	}
-
-	err = SetupPodCreateToCompleteTimeController(mgr)
-	if err != nil {
-		return nil, err
-	}
-
-	err = SetupOverheadController(mgr)
-	if err != nil {
-		return nil, err
-	}
+	err = SetupController(mgr)
 
 	return mgr, nil
+}
+
+func SetupController(mgr ctrl.Manager) error {
+	exportFilter := &ExporterFilter{
+		noReconcile:  []predicate.Predicate{},
+		yesReconcile: []predicate.Predicate{},
+	}
+
+	// yesReconcile are metrics with non-empty Reconcile methods
+	exportFilter.yesReconcile = append(exportFilter.yesReconcile, &overheadGapEventFilter{client: mgr.GetClient()})
+	exportFilter.yesReconcile = append(exportFilter.yesReconcile, &taskRunGapEventFilter{})
+
+	// noReconcile are metrics with empty Reconcile methods
+	exportFilter.noReconcile = append(exportFilter.noReconcile, &pipelineRefWaitTimeFilter{waitDuration: NewPipelineReferenceWaitTimeMetric()})
+	exportFilter.noReconcile = append(exportFilter.noReconcile, &startTimeEventFilter{metric: NewPipelineRunScheduledMetric()})
+	exportFilter.noReconcile = append(exportFilter.noReconcile, NewPodCreateToCompleteFilter())
+	exportFilter.noReconcile = append(exportFilter.noReconcile, &createKubeletLatencyFilter{metric: NewPodCreateToKubeletDurationMetric()})
+	exportFilter.noReconcile = append(exportFilter.noReconcile, &kubeletContainerLatencyFilter{metric: NewPodKubeletToContainerStartDurationMetric()})
+	exportFilter.noReconcile = append(exportFilter.noReconcile, &taskRefWaitTimeFilter{waitDuration: NewTaskReferenceWaitTimeMetric()})
+	exportFilter.noReconcile = append(exportFilter.noReconcile, &trStartTimeEventFilter{metric: NewTaskRunScheduledMetric()})
+
+	r := buildReconciler(mgr.GetClient(), mgr.GetScheme(), mgr.GetEventRecorderFor("MetricsExporter"))
+
+	err := ctrl.NewControllerManagedBy(mgr).For(&pipelinev1.PipelineRun{}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 32}).
+		WithEventFilter(exportFilter).
+		Complete(r)
+
+	if err != nil {
+		return err
+	}
+
+	err = mgr.Add(r)
+	if err != nil {
+		return err
+	}
+
+	err = ctrl.NewControllerManagedBy(mgr).For(&pipelinev1.TaskRun{}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 32}).
+		WithEventFilter(exportFilter).
+		Complete(r)
+
+	if err != nil {
+		return err
+	}
+
+	err = ctrl.NewControllerManagedBy(mgr).For(&corev1.Pod{}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 32}).
+		WithEventFilter(exportFilter).
+		Complete(r)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type ExporterFilter struct {
+	noReconcile  []predicate.Predicate
+	yesReconcile []predicate.Predicate
+	pvcFilter    predicate.Predicate
+}
+
+func (f *ExporterFilter) Generic(event.GenericEvent) bool {
+	return false
+}
+
+func (f *ExporterFilter) Create(event.CreateEvent) bool {
+	return false
+}
+
+func (f *ExporterFilter) Delete(event.DeleteEvent) bool {
+	return false
+}
+
+func (f ExporterFilter) Update(e event.UpdateEvent) bool {
+	// yes, distinguishing between metrics which need to Reconcile and those which can fully be handled
+	// in the filter's Update event is not required to determine if this Update implementation should return
+	// 'true' and have controller runtime call Reconcile; however, I have found being explicit on this detail
+	// is helpful and informative when working on this component.
+
+	for _, p := range f.noReconcile {
+		p.Update(e)
+	}
+	callReconcile := false
+	for _, p := range f.yesReconcile {
+		callReconcile = p.Update(e) || callReconcile
+	}
+	return callReconcile
+}
+
+type ExporterReconcile struct {
+	client              client.Client
+	scheme              *runtime.Scheme
+	eventRecorder       record.EventRecorder
+	overheadCollector   *OverheadCollector
+	gapAdditionalLabels bool
+	prGapCollector      *PipelineRunTaskRunGapCollector
+	trGaps              *prometheus.HistogramVec
+	nsCache             map[string]struct{}
+	pvcCollector        *ThrottledByPVCQuotaCollector
+}
+
+func buildReconciler(client client.Client, scheme *runtime.Scheme, eventRecorder record.EventRecorder) *ExporterReconcile {
+	prTrGapCollector := NewPipelineRunTaskRunGapCollector()
+	r := &ExporterReconcile{
+		client:              client,
+		scheme:              scheme,
+		eventRecorder:       eventRecorder,
+		overheadCollector:   NewOverheadCollector(),
+		gapAdditionalLabels: prTrGapCollector.additionalLabels,
+		prGapCollector:      prTrGapCollector,
+		trGaps:              prTrGapCollector.trGaps,
+		nsCache:             map[string]struct{}{},
+		pvcCollector:        NewPVCThrottledCollector(),
+	}
+	return r
+}
+
+func (r *ExporterReconcile) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	// replace with golang errors.Join(errs ...error) when we go to golang 1.20
+	errorMsg := ""
+	//TODO if we start providing something other than the empty Result object, we'll need to build a list and handle non-standard results
+	result, err := r.ReconcileOverhead(ctx, request)
+	if err != nil {
+		errorMsg = fmt.Sprintf("%s\n%s", errorMsg, err.Error())
+	}
+	result, err = r.ReconcilePipelineRunTaskRunGap(ctx, request)
+	if err != nil {
+		errorMsg = fmt.Sprintf("%s\n%s", errorMsg, err.Error())
+	}
+	if len(errorMsg) > 0 {
+		return result, fmt.Errorf("%s", errorMsg)
+	}
+	return result, nil
 }

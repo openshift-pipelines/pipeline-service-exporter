@@ -72,6 +72,8 @@ func main() {
 
 	ctx := ctrl.SetupSignalHandler()
 	restConfig := ctrl.GetConfigOrDie()
+	restConfig.QPS = 50
+	restConfig.Burst = 50
 	var mgr ctrl.Manager
 	var err error
 	mopts := ctrl.Options{

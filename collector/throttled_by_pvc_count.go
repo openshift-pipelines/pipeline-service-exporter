@@ -2,87 +2,23 @@ package collector
 
 import (
 	"context"
-	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"github.com/tektoncd/pipeline/pkg/reconciler/volumeclaim"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"knative.dev/pkg/apis"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strings"
-	"sync"
 	"time"
 )
-
-func SetupPVCThrottledController(mgr ctrl.Manager) error {
-	reconciler := &ReconcilePVCThrottled{
-		client:        mgr.GetClient(),
-		scheme:        mgr.GetScheme(),
-		eventRecorder: mgr.GetEventRecorderFor("MetricExporterPVCThrottled"),
-		prCollector:   NewPVCThrottledCollector(),
-		nsCache:       map[string]struct{}{},
-		listMutex:     sync.RWMutex{},
-	}
-	err := ctrl.NewControllerManagedBy(mgr).For(&v1.PipelineRun{}).WithEventFilter(&pvcThrottledFilter{}).Complete(reconciler)
-	if err == nil {
-		mgr.Add(reconciler)
-	}
-	return err
-}
 
 type ThrottledByPVCQuotaCollector struct {
 	pvcThrottle *prometheus.GaugeVec
 }
 
-type ReconcilePVCThrottled struct {
-	client        client.Client
-	scheme        *runtime.Scheme
-	eventRecorder record.EventRecorder
-	prCollector   *ThrottledByPVCQuotaCollector
-	nsCache       map[string]struct{}
-	listMutex     sync.RWMutex
-}
-
-func (r *ReconcilePVCThrottled) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithCancel(ctx)
-	defer cancel()
-	log := log.FromContext(ctx)
-
-	// so we don't collide with the periodic relist/reset in Start; we should still be able to process events concurrently
-	r.listMutex.RLock()
-	defer r.listMutex.RUnlock()
-
-	pr := &v1.PipelineRun{}
-	err := r.client.Get(ctx, types.NamespacedName{Namespace: request.Namespace, Name: request.Name}, pr)
-	if err != nil && !errors.IsNotFound(err) {
-		return reconcile.Result{}, err
-	}
-	if err != nil {
-		// given the various complexities around deletion processing and controllers, we do not decrement our
-		// metric in real time, but rather reset the metrics in our background poller attuned to the operator's pruner
-		// interval.
-		log.V(4).Info(fmt.Sprintf("processing deleted pipelinerun %q", request.NamespacedName))
-		return reconcile.Result{}, nil
-	}
-
-	// based on our WithEventFilter we should only be getting called if this got throttled by PVC
-	log.V(4).Info(fmt.Sprintf("recording pvc throttling for %q", request.NamespacedName))
-	r.prCollector.incPVCThrottle(pr)
-	return reconcile.Result{}, nil
-}
-
-// Start - we do a long running runnable to reset the metric in case we miss delete events, as controller relist does not duplicate
+// Start - we do a long running runnable to reset the pvc metric in case we miss delete events, as controller relist does not duplicate
 // delete events like it can create/update events
-func (r *ReconcilePVCThrottled) Start(ctx context.Context) error {
+func (r *ExporterReconcile) Start(ctx context.Context) error {
 	//this matches the scheduling interval for pruner in the operator's TektonConfig object
 	//for now we are going to refrain from reading in the TektonConfig, bringing in a 3rd party
 	// golang cronjob schedule parser, and pulling the value; but if we end up changing it with
@@ -115,13 +51,11 @@ func failedBecauseOfPVCQuota(pr *v1.PipelineRun) bool {
 	return true
 }
 
-func (r *ReconcilePVCThrottled) resetPVCStats(ctx context.Context) {
-	r.listMutex.Lock()
-	defer r.listMutex.Unlock()
+func (r *ExporterReconcile) resetPVCStats(ctx context.Context) {
 	// originally considered using pvcThrottle.Reset() but wanted to allow for history based searches from metrics
 	// console, so we are trying keeping track of namespaces; for now, not worried about history across exporter restart
 	for ns := range r.nsCache {
-		r.prCollector.zeroPVCThrottle(ns)
+		r.pvcCollector.zeroPVCThrottle(ns)
 	}
 	// however, we'll clear out cache to avoid long term accumulation, memory leak, as things like dynamically created test clusters
 	// accumulate; as long as we maintain history for permanent, active tenant namespaces, that is OK
@@ -134,7 +68,7 @@ func (r *ReconcilePVCThrottled) resetPVCStats(ctx context.Context) {
 		for _, pr := range prList.Items {
 			r.nsCache[pr.Namespace] = struct{}{}
 			if failedBecauseOfPVCQuota(&pr) {
-				r.prCollector.incPVCThrottle(&pr)
+				r.pvcCollector.incPVCThrottle(&pr)
 				nsWithPVCThrottle[pr.Namespace] = struct{}{}
 				continue
 			}
@@ -146,7 +80,7 @@ func (r *ReconcilePVCThrottled) resetPVCStats(ctx context.Context) {
 			if ok {
 				continue
 			}
-			r.prCollector.zeroPVCThrottle(pr.Namespace)
+			r.pvcCollector.zeroPVCThrottle(pr.Namespace)
 		}
 	}
 }

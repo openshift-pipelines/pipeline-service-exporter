@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"testing"
 	"time"
@@ -30,7 +29,7 @@ func TestPipelineRunGapCollection(t *testing.T) {
 	_ = v1.AddToScheme(scheme)
 	_ = v1beta1.AddToScheme(scheme)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
-	gapReconciler := &ReconcilePipelineRunTaskRunGap{client: c, prCollector: NewPipelineRunTaskRunGapCollector()}
+	gapReconciler := buildReconciler(c, nil, nil)
 
 	var err error
 	// first we test with the samples pulled from actual RHTAP yaml to best capture the parallel task executions
@@ -69,7 +68,7 @@ func TestPipelineRunGapCollection(t *testing.T) {
 		}
 		_, err = gapReconciler.Reconcile(ctx, request)
 		label := prometheus.Labels{NS_LABEL: pr.Namespace, STATUS_LABEL: SUCCEEDED}
-		validateHistogramVec(t, gapReconciler.prCollector.trGaps, label, true)
+		validateHistogramVec(t, gapReconciler.prGapCollector.trGaps, label, true)
 	}
 
 	// then some additional unit tests were we build simpler pipelineruns/taskruns that capture paths
@@ -200,8 +199,8 @@ func TestPipelineRunGapCollection(t *testing.T) {
 	}
 
 	label := prometheus.Labels{NS_LABEL: "test-namespace", STATUS_LABEL: SUCCEEDED}
-	validateHistogramVec(t, gapReconciler.prCollector.trGaps, label, false)
-	metrics.Registry.Unregister(gapReconciler.prCollector.trGaps)
+	validateHistogramVec(t, gapReconciler.prGapCollector.trGaps, label, false)
+	unregisterStats(gapReconciler)
 
 }
 
@@ -213,7 +212,7 @@ func TestPipelineRunGapCollection_MissingTaskRuns(t *testing.T) {
 	_ = v1.AddToScheme(scheme)
 	_ = v1beta1.AddToScheme(scheme)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
-	gapReconciler := &ReconcilePipelineRunTaskRunGap{client: c, prCollector: NewPipelineRunTaskRunGapCollector()}
+	gapReconciler := buildReconciler(c, nil, nil)
 
 	var err error
 	// first we test with the samples pulled from actual RHTAP yaml to best capture the parallel task executions
@@ -240,9 +239,9 @@ func TestPipelineRunGapCollection_MissingTaskRuns(t *testing.T) {
 		}
 		_, err = gapReconciler.Reconcile(ctx, request)
 		label := prometheus.Labels{NS_LABEL: pr.Namespace, STATUS_LABEL: SUCCEEDED}
-		validateHistogramVecZeroCount(t, gapReconciler.prCollector.trGaps, label)
+		validateHistogramVecZeroCount(t, gapReconciler.prGapCollector.trGaps, label)
 	}
-	metrics.Registry.Unregister(gapReconciler.prCollector.trGaps)
+	unregisterStats(gapReconciler)
 }
 
 func TestTaskRunGapEventFilter_Update(t *testing.T) {

@@ -1,17 +1,11 @@
 package collector
 
 import (
-	"context"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 /*
@@ -39,16 +33,6 @@ So,
 is "perhaps" the sum of those two
 */
 
-type ReconcilePodKubeletToContainerLatency struct {
-	client        client.Client
-	scheme        *runtime.Scheme
-	eventRecorder record.EventRecorder
-}
-
-func (r *ReconcilePodKubeletToContainerLatency) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	return reconcile.Result{}, nil
-}
-
 func NewPodKubeletToContainerStartDurationMetric() *prometheus.HistogramVec {
 	labelNames := []string{NS_LABEL, TASK_NAME_LABEL}
 	metric := prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -58,16 +42,6 @@ func NewPodKubeletToContainerStartDurationMetric() *prometheus.HistogramVec {
 	}, labelNames)
 	metrics.Registry.MustRegister(metric)
 	return metric
-}
-
-func SetupPodKubeletToContainerStartDurationController(mgr ctrl.Manager) error {
-	filter := &kubeletContainerLatencyFilter{metric: NewPodKubeletToContainerStartDurationMetric()}
-	reconciler := &ReconcilePodKubeletToContainerLatency{
-		client:        mgr.GetClient(),
-		scheme:        mgr.GetScheme(),
-		eventRecorder: mgr.GetEventRecorderFor("MetricExporterStageTwoPods"),
-	}
-	return ctrl.NewControllerManagedBy(mgr).For(&corev1.Pod{}).WithEventFilter(filter).Complete(reconciler)
 }
 
 type PodKubeletToContainerLatencyCollector struct {
@@ -91,6 +65,7 @@ func (f *kubeletContainerLatencyFilter) Delete(event.DeleteEvent) bool {
 }
 
 func (f *kubeletContainerLatencyFilter) Update(e event.UpdateEvent) bool {
+
 	oldpod, okold := e.ObjectOld.(*corev1.Pod)
 	newpod, oknew := e.ObjectNew.(*corev1.Pod)
 	if okold && oknew {
