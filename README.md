@@ -28,5 +28,9 @@ go run main.go
 ### Deployment
 The Pipeline Service Exporter is deployed as a separate service within the [Pipeline Service](https://github.com/openshift-pipelines/pipeline-service/tree/main/operator/gitops/argocd/pipeline-service/metrics-exporter) repository. The Deployment (built out of a container image created from the Dockerfile in this repo), Service and other resources required for it are present in that folder.
 
+One could use the pipeline-service `dev_setup.sh` script to do local development.  However, one could also simple run `oc apply -k` or `oc delete -k` against `operator/gitops/argocd/pipeline-service/metrics-exporter` when in your pipeline-service local clone of the repository.
+Just install the OpenShift Pipelines operator from the OCP console beforehand.  Build the image from the Dockerfile at the root of this repository, but push to your personal image registry repository.  Then update the `operator/gitops/argocd/pipeline-service/metrics-exporter/kustomization.yaml` 
+to point to your image.  The image pull policy of the deployment is `IfNotPresent`, so just change the version tag of your image as you iterate.
+
 ### License
 The Pipeline Service Exporter is licensed under the Apache-2.0 license.
