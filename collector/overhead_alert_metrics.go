@@ -10,23 +10,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"knative.dev/pkg/apis"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-func SetupOverheadController(mgr ctrl.Manager) error {
-	reconciler := &ReconcileOverhead{
-		client:        mgr.GetClient(),
-		scheme:        mgr.GetScheme(),
-		eventRecorder: mgr.GetEventRecorderFor("MetricExporterExecutionOverhead"),
-		collector:     NewOverheadCollector(),
-	}
-	return ctrl.NewControllerManagedBy(mgr).For(&v1.PipelineRun{}).WithEventFilter(&overheadGapEventFilter{client: reconciler.client}).Complete(reconciler)
-}
 
 type OverheadCollector struct {
 	execution  *prometheus.HistogramVec
@@ -53,7 +42,6 @@ func (f *overheadGapEventFilter) Delete(event.DeleteEvent) bool {
 }
 
 func (f *overheadGapEventFilter) Update(e event.UpdateEvent) bool {
-
 	oldPR, okold := e.ObjectOld.(*v1.PipelineRun)
 	newPR, oknew := e.ObjectNew.(*v1.PipelineRun)
 	// the real-time filtering involes retrieving the taskruns that are childs of this pipelinerun, so we only
@@ -117,7 +105,7 @@ func NewOverheadCollector() *OverheadCollector {
 	return collector
 }
 
-func (r *ReconcileOverhead) accumulateGaps(pr *v1.PipelineRun, oc client.Client, ctx context.Context) (float64, []GapEntry, bool) {
+func accumulateGaps(pr *v1.PipelineRun, oc client.Client, ctx context.Context) (float64, []GapEntry, bool) {
 	if skipPipelineRun(pr) {
 		return float64(0), []GapEntry{}, false
 	}
@@ -137,7 +125,7 @@ func (r *ReconcileOverhead) accumulateGaps(pr *v1.PipelineRun, oc client.Client,
 	return gapTotal, gapEntries, !abort
 }
 
-func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+func (r *ExporterReconcile) ReconcileOverhead(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(ctx)
 	defer cancel()
@@ -154,7 +142,7 @@ func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Req
 	}
 	succeedCondition := pr.Status.GetCondition(apis.ConditionSucceeded)
 	if succeedCondition != nil && !succeedCondition.IsUnknown() {
-		gapTotal, gapEntries, foundGaps := r.accumulateGaps(pr, r.client, ctx)
+		gapTotal, gapEntries, foundGaps := accumulateGaps(pr, r.client, ctx)
 		if foundGaps {
 			status := SUCCEEDED
 			if succeedCondition.IsFalse() {
@@ -174,7 +162,7 @@ func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Req
 					}
 					log.Info(dbgStr)
 				}
-				r.collector.execution.With(labels).Observe(overhead)
+				r.overheadCollector.execution.With(labels).Observe(overhead)
 			} else {
 				log.V(4).Info(fmt.Sprintf("filtering execution metric for %s with gap %v and total %v",
 					request.NamespacedName.String(), gapTotal, totalDuration))
@@ -184,7 +172,7 @@ func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Req
 				overhead := scheduleDuration / totalDuration
 				log.V(4).Info(fmt.Sprintf("registering scheduling metric for %s with gap %v and total %v and overhead %v",
 					request.NamespacedName.String(), scheduleDuration, totalDuration, overhead))
-				r.collector.scheduling.With(labels).Observe(overhead)
+				r.overheadCollector.scheduling.With(labels).Observe(overhead)
 			} else {
 				log.V(4).Info(fmt.Sprintf("filtering scheduling metric for %s with gap %v and total %v",
 					request.NamespacedName.String(), scheduleDuration, totalDuration))
@@ -198,5 +186,4 @@ func (r *ReconcileOverhead) Reconcile(ctx context.Context, request reconcile.Req
 		return reconcile.Result{}, tagPipelineRunsWithTaskRunsGettingThrottled(pr, r.client, ctx)
 	}
 	return reconcile.Result{}, nil
-
 }

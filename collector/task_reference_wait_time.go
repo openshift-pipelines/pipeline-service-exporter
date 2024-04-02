@@ -1,46 +1,25 @@
 package collector
 
 import (
-	"context"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-func SetupTaskReferenceWaitTimeController(mgr ctrl.Manager) error {
-	reconciler := &ReconcileTaskReferenceWaitTime{
-		client:        mgr.GetClient(),
-		scheme:        mgr.GetScheme(),
-		eventRecorder: mgr.GetEventRecorderFor("MetricExporterWaitTaskRunTaskResolution"),
-	}
-	waitMetric := NewTaskReferenceWaitTimeMetric()
-	metrics.Registry.MustRegister(waitMetric)
-	return ctrl.NewControllerManagedBy(mgr).For(&v1.TaskRun{}).WithEventFilter(&taskRefWaitTimeFilter{waitDuration: waitMetric}).Complete(reconciler)
-}
 
 func NewTaskReferenceWaitTimeMetric() *prometheus.HistogramVec {
 	labelNames := []string{NS_LABEL, TASK_NAME_LABEL}
-	return prometheus.NewHistogramVec(prometheus.HistogramOpts{
+	waitMetric := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "taskrun_task_resolution_wait_milliseconds",
 		Help:    "Duration in milliseconds for a resolution request for a task reference needed by a taskrun to be recognized as complete by the taskrun reconciler in the tekton controller. ",
 		Buckets: prometheus.ExponentialBuckets(float64(100), float64(5), 6),
 	}, labelNames)
-
-}
-
-type ReconcileTaskReferenceWaitTime struct {
-	client        client.Client
-	scheme        *runtime.Scheme
-	eventRecorder record.EventRecorder
+	metrics.Registry.MustRegister(waitMetric)
+	return waitMetric
 }
 
 type taskRefWaitTimeFilter struct {
@@ -65,6 +44,7 @@ func (f *taskRefWaitTimeFilter) Delete(event.DeleteEvent) bool {
 }
 
 func (f *taskRefWaitTimeFilter) Update(e event.UpdateEvent) bool {
+
 	oldTR, okold := e.ObjectOld.(*v1.TaskRun)
 	newTR, oknew := e.ObjectNew.(*v1.TaskRun)
 	if okold && oknew {
@@ -119,8 +99,4 @@ func (f *taskRefWaitTimeFilter) getKey(tr *v1.TaskRun) string {
 		Name:      tr.Name,
 	}
 	return key.String()
-}
-
-func (r *ReconcileTaskReferenceWaitTime) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	return reconcile.Result{}, nil
 }

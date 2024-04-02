@@ -1,38 +1,23 @@
 package collector
 
 import (
-	"context"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-func SetupPodCreateToCompleteTimeController(mgr ctrl.Manager) error {
-	reconciler := &ReconcilePodCreateToCompleteTime{
-		client:        mgr.GetClient(),
-		scheme:        mgr.GetScheme(),
-		eventRecorder: mgr.GetEventRecorderFor("MetricExporterPodCreateToCompleteTime"),
-	}
-	filter := NewPodCreateToCompleteFilter()
-	metrics.Registry.MustRegister(filter.duration)
-	return ctrl.NewControllerManagedBy(mgr).For(&corev1.Pod{}).WithEventFilter(filter).Complete(reconciler)
-}
 
 func NewPodCreateToCompleteMetric() *prometheus.HistogramVec {
 	labelNames := []string{NS_LABEL, PIPELINE_NAME_LABEL, TASK_NAME_LABEL}
-	return prometheus.NewHistogramVec(prometheus.HistogramOpts{
+	c2cMetric := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "tekton_pods_create_to_complete_seconds",
 		Help: "Since tekton's duration are only from start time to completion, we provide a create time to completion for comparisons and potential alerting",
 		// reminder: exponential buckets need a start value greater than 0
 		// the results in buckets of 0.1, 0.5, 2.5, 12.5, 62.5, 312.5 seconds
 		Buckets: prometheus.ExponentialBuckets(0.1, 5, 6),
 	}, labelNames)
+	metrics.Registry.MustRegister(c2cMetric)
+	return c2cMetric
 }
 
 func NewPodCreateToCompleteFilter() *podCreateToCompleteFilter {
@@ -58,6 +43,7 @@ func (f *podCreateToCompleteFilter) Delete(e event.DeleteEvent) bool {
 }
 
 func (f *podCreateToCompleteFilter) Update(e event.UpdateEvent) bool {
+
 	oldpod, okold := e.ObjectOld.(*corev1.Pod)
 	newpod, oknew := e.ObjectNew.(*corev1.Pod)
 	if okold && oknew {
@@ -92,14 +78,4 @@ func (f *podCreateToCompleteFilter) Update(e event.UpdateEvent) bool {
 		}
 	}
 	return false
-}
-
-type ReconcilePodCreateToCompleteTime struct {
-	client        client.Client
-	scheme        *runtime.Scheme
-	eventRecorder record.EventRecorder
-}
-
-func (r *ReconcilePodCreateToCompleteTime) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	return reconcile.Result{}, nil
 }

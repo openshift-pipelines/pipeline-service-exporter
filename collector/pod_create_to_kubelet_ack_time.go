@@ -1,16 +1,10 @@
 package collector
 
 import (
-	"context"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 /*
@@ -38,16 +32,6 @@ So,
 is "perhaps" the sum of those two
 */
 
-type ReconcilePodCreateToKubeletLatency struct {
-	client        client.Client
-	scheme        *runtime.Scheme
-	eventRecorder record.EventRecorder
-}
-
-func (r *ReconcilePodCreateToKubeletLatency) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	return reconcile.Result{}, nil
-}
-
 func NewPodCreateToKubeletDurationMetric() *prometheus.HistogramVec {
 	labelNames := []string{NS_LABEL, TASK_NAME_LABEL}
 	metric := prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -57,16 +41,6 @@ func NewPodCreateToKubeletDurationMetric() *prometheus.HistogramVec {
 	}, labelNames)
 	metrics.Registry.MustRegister(metric)
 	return metric
-}
-
-func SetupPodCreateToKubeletDurationController(mgr ctrl.Manager) error {
-	filter := &createKubeletLatencyFilter{metric: NewPodCreateToKubeletDurationMetric()}
-	reconciler := &ReconcilePodCreateToKubeletLatency{
-		client:        mgr.GetClient(),
-		scheme:        mgr.GetScheme(),
-		eventRecorder: mgr.GetEventRecorderFor("MetricExporterStageOnePods"),
-	}
-	return ctrl.NewControllerManagedBy(mgr).For(&corev1.Pod{}).WithEventFilter(filter).Complete(reconciler)
 }
 
 type createKubeletLatencyFilter struct {
@@ -86,6 +60,7 @@ func (f *createKubeletLatencyFilter) Delete(event.DeleteEvent) bool {
 }
 
 func (f *createKubeletLatencyFilter) Update(e event.UpdateEvent) bool {
+
 	oldpod, okold := e.ObjectOld.(*corev1.Pod)
 	newpod, oknew := e.ObjectNew.(*corev1.Pod)
 	if okold && oknew {

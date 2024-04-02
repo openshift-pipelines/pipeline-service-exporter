@@ -9,23 +9,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-func SetupPipelineRunTaskRunGapController(mgr ctrl.Manager) error {
-	reconciler := &ReconcilePipelineRunTaskRunGap{
-		client:        mgr.GetClient(),
-		scheme:        mgr.GetScheme(),
-		eventRecorder: mgr.GetEventRecorderFor("MetricExporterPipelineRunsTaskRunGap"),
-		prCollector:   NewPipelineRunTaskRunGapCollector(),
-	}
-	return ctrl.NewControllerManagedBy(mgr).For(&v1.PipelineRun{}).WithEventFilter(&taskRunGapEventFilter{}).Complete(reconciler)
-}
 
 type PipelineRunTaskRunGapCollector struct {
 	trGaps           *prometheus.HistogramVec
@@ -93,7 +82,7 @@ func (f *taskRunGapEventFilter) Generic(event.GenericEvent) bool {
 	return false
 }
 
-func (r *ReconcilePipelineRunTaskRunGap) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+func (r *ExporterReconcile) ReconcilePipelineRunTaskRunGap(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(ctx)
 	defer cancel()
@@ -111,7 +100,7 @@ func (r *ReconcilePipelineRunTaskRunGap) Reconcile(ctx context.Context, request 
 
 	// based on our WithEventFilter we should only be getting called with the start time is set
 	log.V(8).Info(fmt.Sprintf("recording taskrun gap for %q", request.NamespacedName))
-	r.prCollector.bumpGapDuration(pr, r.client, ctx)
+	r.prGapCollector.bumpGapDuration(pr, r.client, ctx)
 	return reconcile.Result{}, nil
 }
 

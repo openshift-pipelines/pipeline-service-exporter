@@ -1,17 +1,11 @@
 package collector
 
 import (
-	"context"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
 	"knative.dev/pkg/apis"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 /*
@@ -39,16 +33,6 @@ So,
 is "perhaps" the sum of those two
 */
 
-func SetupTaskRunScheduleDurationController(mgr ctrl.Manager) error {
-	filter := &trStartTimeEventFilter{metric: NewTaskRunScheduledMetric()}
-	reconciler := &ReconcileTaskRunScheduled{
-		client:        mgr.GetClient(),
-		scheme:        mgr.GetScheme(),
-		eventRecorder: mgr.GetEventRecorderFor("MetricExporterScheduledTaskRuns"),
-	}
-	return ctrl.NewControllerManagedBy(mgr).For(&v1.TaskRun{}).WithEventFilter(filter).Complete(reconciler)
-}
-
 func NewTaskRunScheduledMetric() *prometheus.HistogramVec {
 	labelNames := []string{NS_LABEL, TASK_NAME_LABEL, STATUS_LABEL}
 	durationScheduled := prometheus.NewHistogramVec(prometheus.HistogramOpts{
@@ -63,12 +47,6 @@ func NewTaskRunScheduledMetric() *prometheus.HistogramVec {
 
 	return durationScheduled
 
-}
-
-type ReconcileTaskRunScheduled struct {
-	client        client.Client
-	scheme        *runtime.Scheme
-	eventRecorder record.EventRecorder
 }
 
 type trStartTimeEventFilter struct {
@@ -88,6 +66,7 @@ func (f *trStartTimeEventFilter) Delete(event.DeleteEvent) bool {
 }
 
 func (f *trStartTimeEventFilter) Update(e event.UpdateEvent) bool {
+
 	oldTR, okold := e.ObjectOld.(*v1.TaskRun)
 	newTR, oknew := e.ObjectNew.(*v1.TaskRun)
 	if okold && oknew {
@@ -97,10 +76,6 @@ func (f *trStartTimeEventFilter) Update(e event.UpdateEvent) bool {
 		}
 	}
 	return false
-}
-
-func (r *ReconcileTaskRunScheduled) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	return reconcile.Result{}, nil
 }
 
 func bumpTaskRunScheduledDuration(scheduleDuration float64, tr *v1.TaskRun, metric *prometheus.HistogramVec) {

@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"testing"
 	"time"
@@ -277,10 +276,7 @@ func TestReconcileOverhead_Reconcile(t *testing.T) {
 	_ = v1.AddToScheme(scheme)
 	_ = v1beta1.AddToScheme(scheme)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
-	overheadReconciler := &ReconcileOverhead{
-		client:    c,
-		collector: NewOverheadCollector(),
-	}
+	overheadReconciler := buildReconciler(c, nil, nil)
 	var err error
 	// first we test with the samples pulled from actual RHTAP yaml to best capture the parallel task executions
 	prs := []v1beta1.PipelineRun{}
@@ -324,9 +320,9 @@ func TestReconcileOverhead_Reconcile(t *testing.T) {
 		var histogram prometheus.Histogram
 		var metric *dto.Metric
 		if index == 0 {
-			validateHistogramVec(t, overheadReconciler.collector.scheduling, label, true)
+			validateHistogramVec(t, overheadReconciler.overheadCollector.scheduling, label, true)
 		} else {
-			observer, err = overheadReconciler.collector.scheduling.GetMetricWith(label)
+			observer, err = overheadReconciler.overheadCollector.scheduling.GetMetricWith(label)
 			assert.NoError(t, err)
 			assert.NotNil(t, observer)
 			histogram = observer.(prometheus.Histogram)
@@ -336,7 +332,7 @@ func TestReconcileOverhead_Reconcile(t *testing.T) {
 			assert.NotNil(t, metric.Histogram.SampleCount)
 			assert.Equal(t, *metric.Histogram.SampleCount, uint64(0))
 		}
-		observer, err = overheadReconciler.collector.execution.GetMetricWith(label)
+		observer, err = overheadReconciler.overheadCollector.execution.GetMetricWith(label)
 		assert.NoError(t, err)
 		assert.NotNil(t, observer)
 		histogram = observer.(prometheus.Histogram)
@@ -347,9 +343,7 @@ func TestReconcileOverhead_Reconcile(t *testing.T) {
 		assert.Equal(t, *metric.Histogram.SampleCount, uint64(0))
 
 	}
-	metrics.Registry.Unregister(overheadReconciler.collector.execution)
-	metrics.Registry.Unregister(overheadReconciler.collector.scheduling)
-
+	unregisterStats(overheadReconciler)
 }
 
 func TestReconcileOverhead_Reconcile_MissingTaskRuns(t *testing.T) {
@@ -360,10 +354,7 @@ func TestReconcileOverhead_Reconcile_MissingTaskRuns(t *testing.T) {
 	_ = v1.AddToScheme(scheme)
 	_ = v1beta1.AddToScheme(scheme)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
-	overheadReconciler := &ReconcileOverhead{
-		client:    c,
-		collector: NewOverheadCollector(),
-	}
+	overheadReconciler := buildReconciler(c, nil, nil)
 	var err error
 	// first we test with the samples pulled from actual RHTAP yaml to best capture the parallel task executions
 	prs := []v1beta1.PipelineRun{}
@@ -389,10 +380,9 @@ func TestReconcileOverhead_Reconcile_MissingTaskRuns(t *testing.T) {
 		}
 		_, err = overheadReconciler.Reconcile(ctx, request)
 		label := prometheus.Labels{NS_LABEL: pr.Namespace, STATUS_LABEL: SUCCEEDED}
-		validateHistogramVecZeroCount(t, overheadReconciler.collector.execution, label)
+		validateHistogramVecZeroCount(t, overheadReconciler.overheadCollector.execution, label)
 	}
-	metrics.Registry.Unregister(overheadReconciler.collector.execution)
-	metrics.Registry.Unregister(overheadReconciler.collector.scheduling)
+	unregisterStats(overheadReconciler)
 
 }
 
@@ -404,10 +394,7 @@ func TestReconcileOverhead_Reconcile_MockWithHighOverhead(t *testing.T) {
 	_ = v1.AddToScheme(scheme)
 	_ = v1beta1.AddToScheme(scheme)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
-	overheadReconciler := &ReconcileOverhead{
-		client:    c,
-		collector: NewOverheadCollector(),
-	}
+	overheadReconciler := buildReconciler(c, nil, nil)
 
 	var err error
 	now := time.Now().UTC()
@@ -545,9 +532,8 @@ func TestReconcileOverhead_Reconcile_MockWithHighOverhead(t *testing.T) {
 	}
 
 	label := prometheus.Labels{NS_LABEL: "test-namespace", STATUS_LABEL: SUCCEEDED}
-	validateHistogramVec(t, overheadReconciler.collector.execution, label, false)
-	metrics.Registry.Unregister(overheadReconciler.collector.execution)
-	metrics.Registry.Unregister(overheadReconciler.collector.scheduling)
+	validateHistogramVec(t, overheadReconciler.overheadCollector.execution, label, false)
+	unregisterStats(overheadReconciler)
 }
 
 func TestReconcileOverhead_Reconcile_MockWithHighOverheadButThrottled(t *testing.T) {
@@ -558,10 +544,7 @@ func TestReconcileOverhead_Reconcile_MockWithHighOverheadButThrottled(t *testing
 	_ = v1.AddToScheme(scheme)
 	_ = v1beta1.AddToScheme(scheme)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
-	overheadReconciler := &ReconcileOverhead{
-		client:    c,
-		collector: NewOverheadCollector(),
-	}
+	overheadReconciler := buildReconciler(c, nil, nil)
 
 	var err error
 	now := time.Now().UTC()
@@ -703,7 +686,7 @@ func TestReconcileOverhead_Reconcile_MockWithHighOverheadButThrottled(t *testing
 	}
 
 	label := prometheus.Labels{NS_LABEL: "test-namespace", STATUS_LABEL: SUCCEEDED}
-	validateHistogramVecZeroCount(t, overheadReconciler.collector.execution, label)
-	metrics.Registry.Unregister(overheadReconciler.collector.execution)
-	metrics.Registry.Unregister(overheadReconciler.collector.scheduling)
+	validateHistogramVecZeroCount(t, overheadReconciler.overheadCollector.execution, label)
+	unregisterStats(overheadReconciler)
+
 }

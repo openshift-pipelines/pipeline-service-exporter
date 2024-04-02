@@ -1,46 +1,25 @@
 package collector
 
 import (
-	"context"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
 	"knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-func SetupPipelineReferenceWaitTimeController(mgr ctrl.Manager) error {
-	reconciler := &ReconcilePipelineReferenceWaitTime{
-		client:        mgr.GetClient(),
-		scheme:        mgr.GetScheme(),
-		eventRecorder: mgr.GetEventRecorderFor("MetricExporterWaitPipelineRunPipelineResolution"),
-	}
-	waitMetric := NewPipelineReferenceWaitTimeMetric()
-	metrics.Registry.MustRegister(waitMetric)
-	return ctrl.NewControllerManagedBy(mgr).For(&v1.PipelineRun{}).WithEventFilter(&pipelineRefWaitTimeFilter{waitDuration: waitMetric}).Complete(reconciler)
-}
 
 func NewPipelineReferenceWaitTimeMetric() *prometheus.HistogramVec {
 	labelNames := []string{NS_LABEL, PIPELINE_NAME_LABEL}
-	return prometheus.NewHistogramVec(prometheus.HistogramOpts{
+	waitMetric := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "pipelinerun_pipeline_resolution_wait_milliseconds",
 		Help:    "Duration in milliseconds for a resolution request for a pipeline reference needed by a pipelinerun to be recognized as complete by the pipelinerun reconciler in the tekton controller. ",
 		Buckets: prometheus.ExponentialBuckets(float64(100), float64(5), 6),
 	}, labelNames)
-
-}
-
-type ReconcilePipelineReferenceWaitTime struct {
-	client        client.Client
-	scheme        *runtime.Scheme
-	eventRecorder record.EventRecorder
+	metrics.Registry.MustRegister(waitMetric)
+	return waitMetric
 }
 
 type pipelineRefWaitTimeFilter struct {
@@ -112,10 +91,6 @@ func (f *pipelineRefWaitTimeFilter) Update(e event.UpdateEvent) bool {
 		}
 	}
 	return false
-}
-
-func (r *ReconcilePipelineReferenceWaitTime) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	return reconcile.Result{}, nil
 }
 
 func pipelineRef(labels map[string]string) string {
