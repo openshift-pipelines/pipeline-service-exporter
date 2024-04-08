@@ -26,6 +26,7 @@ func unregisterStats(r *ExporterReconcile) {
 	metrics.Registry.Unregister(r.overheadCollector.scheduling)
 	metrics.Registry.Unregister(r.prGapCollector.trGaps)
 	metrics.Registry.Unregister(r.pvcCollector.pvcThrottle)
+	metrics.Registry.Unregister(r.waitPodCollector.waitPodCreate)
 
 }
 

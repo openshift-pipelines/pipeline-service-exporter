@@ -58,6 +58,14 @@ _Labels:_ `namespace` label.  Note:  K8s PVC quota specifications are a namespac
 _Data Type:_ Gauge
 _Description:_ The number of PipelineRuns marked failed because required PVCs could not be created.
 
+_**TaskRun Yet To Attempt Pod Creation:**_  
+The number of TaskRuns where the Tekton Controller has yet to attempt to create its underlying Pod.
+
+_Metric Name:_ `taskrun_pod_create_not_attempted_count`
+_Labels:_ `namespace` label.  
+_Data Type:_ Gauge
+_Description:_ The number of TaskRuns where the Tekton Controller has yet to attempt to create its underlying Pod.
+
 _**PipelineRun Scheduling Duration:**_  
 The duration of time in seconds taken for a PipelineRun to be "scheduled", meaning it has been received by the Tekton controller.  It is calculated as the difference between the creation timestamp and the start time of the PipelineRun, where the start time is set by the Tekton controller on the initial event received for the creation of the PipelineRun.  It is a good indication of how quickly the API server sends create events to the Tekton controller.
 
