@@ -2,7 +2,6 @@ package collector
 
 import (
 	"context"
-	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -14,89 +13,8 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"testing"
 )
-
-func TestPvcThrottledFilter_Update(t *testing.T) {
-	filter := &pvcThrottledFilter{}
-	for _, tc := range []struct {
-		name       string
-		oldPR      *v1.PipelineRun
-		newPR      *v1.PipelineRun
-		expectedRC bool
-	}{
-		{
-			name:  "not failed",
-			oldPR: &v1.PipelineRun{},
-			newPR: &v1.PipelineRun{},
-		},
-		{
-			name:  "failed with right reason and message",
-			oldPR: &v1.PipelineRun{},
-			newPR: &v1.PipelineRun{
-				Status: v1.PipelineRunStatus{
-					Status: duckv1.Status{
-						Conditions: duckv1.Conditions{
-							apis.Condition{
-								Type:    apis.ConditionSucceeded,
-								Status:  corev1.ConditionFalse,
-								Reason:  volumeclaim.ReasonCouldntCreateWorkspacePVC,
-								Message: "exceeded quota",
-							},
-						},
-					},
-				},
-			},
-			expectedRC: true,
-		},
-		{
-			name:  "failed with right reason but wrong message",
-			oldPR: &v1.PipelineRun{},
-			newPR: &v1.PipelineRun{
-				Status: v1.PipelineRunStatus{
-					Status: duckv1.Status{
-						Conditions: duckv1.Conditions{
-							apis.Condition{
-								Type:    apis.ConditionSucceeded,
-								Status:  corev1.ConditionFalse,
-								Reason:  volumeclaim.ReasonCouldntCreateWorkspacePVC,
-								Message: "api server unavailable",
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name:  "failed with right message but wrong reason",
-			oldPR: &v1.PipelineRun{},
-			newPR: &v1.PipelineRun{
-				Status: v1.PipelineRunStatus{
-					Status: duckv1.Status{
-						Conditions: duckv1.Conditions{
-							apis.Condition{
-								Type:    apis.ConditionSucceeded,
-								Status:  corev1.ConditionFalse,
-								Reason:  corev1.PodReasonUnschedulable,
-								Message: "exceeded quota",
-							},
-						},
-					},
-				},
-			},
-		},
-	} {
-		ev := event.UpdateEvent{
-			ObjectOld: tc.oldPR,
-			ObjectNew: tc.newPR,
-		}
-		rc := filter.Update(ev)
-		if rc != tc.expectedRC {
-			t.Errorf(fmt.Sprintf("tc %s expected %v but got %v", tc.name, tc.expectedRC, rc))
-		}
-	}
-}
 
 func TestResetPVCStats(t *testing.T) {
 	objs := []client.Object{}

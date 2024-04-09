@@ -6,7 +6,6 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
 	"github.com/tektoncd/pipeline/pkg/reconciler/volumeclaim"
 	"knative.dev/pkg/apis"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"strings"
 )
@@ -57,33 +56,6 @@ func (r *ExporterReconcile) resetPVCStats(ctx context.Context) {
 			r.pvcCollector.ZeroCollector(pr.Namespace)
 		}
 	}
-}
-
-type pvcThrottledFilter struct {
-}
-
-func (f *pvcThrottledFilter) Create(event.CreateEvent) bool {
-	return false
-}
-
-func (f *pvcThrottledFilter) Delete(e event.DeleteEvent) bool {
-	return false
-}
-
-func (f *pvcThrottledFilter) Update(e event.UpdateEvent) bool {
-
-	oldPR, okold := e.ObjectOld.(*v1.PipelineRun)
-	newPR, oknew := e.ObjectNew.(*v1.PipelineRun)
-	if okold && oknew {
-		if !failedBecauseOfPVCQuota(oldPR) && failedBecauseOfPVCQuota(newPR) {
-			return true
-		}
-	}
-	return false
-}
-
-func (f *pvcThrottledFilter) Generic(event.GenericEvent) bool {
-	return false
 }
 
 func NewPVCThrottledCollector() *ThrottledByPVCQuotaCollector {

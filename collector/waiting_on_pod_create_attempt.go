@@ -47,7 +47,6 @@ func attemptedToCreatePod(tr *v1.TaskRun) bool {
 
 	// failure will result in IsDone being
 	if tr.IsDone() {
-		controllerLog.Info("GGM is done")
 		return true
 	}
 
