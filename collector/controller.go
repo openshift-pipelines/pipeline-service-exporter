@@ -31,6 +31,11 @@ var (
 	controllerLog = ctrl.Log.WithName("controller")
 )
 
+type PollCollector interface {
+	IncCollector(ns string)
+	ZeroCollector(ns string)
+}
+
 func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
 	// we have seen in testing that this path can get invoked prior to the PipelineRun CRD getting generated,
 	// and controller-runtime does not retry on missing CRDs.
@@ -199,8 +204,10 @@ type ExporterReconcile struct {
 	gapAdditionalLabels bool
 	prGapCollector      *PipelineRunTaskRunGapCollector
 	trGaps              *prometheus.HistogramVec
-	nsCache             map[string]struct{}
+	pvcNSCache          map[string]struct{}
+	waitPodNSCache      map[string]struct{}
 	pvcCollector        *ThrottledByPVCQuotaCollector
+	waitPodCollector    *WaitingOnPodCreateAttemptCollector
 }
 
 func buildReconciler(client client.Client, scheme *runtime.Scheme, eventRecorder record.EventRecorder) *ExporterReconcile {
@@ -213,10 +220,21 @@ func buildReconciler(client client.Client, scheme *runtime.Scheme, eventRecorder
 		gapAdditionalLabels: prTrGapCollector.additionalLabels,
 		prGapCollector:      prTrGapCollector,
 		trGaps:              prTrGapCollector.trGaps,
-		nsCache:             map[string]struct{}{},
+		pvcNSCache:          map[string]struct{}{},
+		waitPodNSCache:      map[string]struct{}{},
 		pvcCollector:        NewPVCThrottledCollector(),
+		waitPodCollector:    NewWaitingOnPodCreateAttemptCollector(),
 	}
 	return r
+}
+
+func innerReset(collector PollCollector, nsCache map[string]struct{}) {
+	// originally considered using pvcThrottle.Reset() but wanted to allow for history based searches from metrics
+	// console, so we are trying keeping track of namespaces; for now, not worried about history across exporter restart
+	for ns := range nsCache {
+		collector.ZeroCollector(ns)
+	}
+
 }
 
 func (r *ExporterReconcile) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -235,4 +253,27 @@ func (r *ExporterReconcile) Reconcile(ctx context.Context, request reconcile.Req
 		return result, fmt.Errorf("%s", errorMsg)
 	}
 	return result, nil
+}
+
+// Start - we do a long running runnable to reset the pvc metric in case we miss delete events, as controller relist does not duplicate
+// delete events like it can create/update events
+func (r *ExporterReconcile) Start(ctx context.Context) error {
+	//this matches the scheduling interval for pruner in the operator's TektonConfig object
+	//for now we are going to refrain from reading in the TektonConfig, bringing in a 3rd party
+	// golang cronjob schedule parser, and pulling the value; but if we end up changing it with
+	// some frequency, we'll start doing that
+	// side note: the wait interval for the polling style metrics in core tekton is 30 seconds at last check
+	eventTicker := time.NewTicker(2 * time.Minute)
+	for {
+		select {
+		case <-eventTicker.C:
+			r.resetPVCStats(ctx)
+			r.resetPodCreateAttemptedStats(ctx)
+		case <-ctx.Done():
+			controllerLog.Info("ReconcilePVCThrottled Runnable context is marked as done, exiting")
+			eventTicker.Stop()
+			return nil
+		}
+	}
+	return nil
 }
