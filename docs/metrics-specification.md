@@ -61,10 +61,18 @@ _Description:_ The number of PipelineRuns marked failed because required PVCs co
 _**TaskRun Yet To Attempt Pod Creation:**_  
 The number of TaskRuns where the Tekton Controller has yet to attempt to create its underlying Pod.
 
-_Metric Name:_ `taskrun_pod_create_not_attempted_count`
+_Metric Name:_ `taskrun_pod_create_not_attempted_or_pending_count`
 _Labels:_ `namespace` label.  
 _Data Type:_ Gauge
-_Description:_ The number of TaskRuns where the Tekton Controller has yet to attempt to create its underlying Pod.
+_Description:_ Number of TaskRuns where the Tekton Controller has yet to attempt to create its underlying Pod, or the TaskRun is still in Pending state, for multiple scan iterations.
+
+_**PipelineRun Yet To Kick Off:**_  
+The number of PipelineRuns where the Tekton Controller has yet to attempt to process its correctly defined Task specifications for multiple scan iterations.
+
+_Metric Name:_ `pipelinerun_kickoff_not_attempted_count`
+_Labels:_ `namespace` label.  
+_Data Type:_ Gauge
+_Description:_ Number of TaskRuns where the Tekton Controller has yet to attempt to create its underlying Pod, or the TaskRun is still in Pending state, for multiple scan iterations.
 
 _**PipelineRun Scheduling Duration:**_  
 The duration of time in seconds taken for a PipelineRun to be "scheduled", meaning it has been received by the Tekton controller.  It is calculated as the difference between the creation timestamp and the start time of the PipelineRun, where the start time is set by the Tekton controller on the initial event received for the creation of the PipelineRun.  It is a good indication of how quickly the API server sends create events to the Tekton controller.

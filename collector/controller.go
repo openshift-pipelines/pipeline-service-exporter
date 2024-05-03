@@ -197,41 +197,48 @@ func (f ExporterFilter) Update(e event.UpdateEvent) bool {
 }
 
 type ExporterReconcile struct {
-	client              client.Client
-	scheme              *runtime.Scheme
-	eventRecorder       record.EventRecorder
-	overheadCollector   *OverheadCollector
-	gapAdditionalLabels bool
-	prGapCollector      *PipelineRunTaskRunGapCollector
-	trGaps              *prometheus.HistogramVec
-	pvcNSCache          map[string]struct{}
-	waitPodNSCache      map[string]struct{}
-	pvcCollector        *ThrottledByPVCQuotaCollector
-	waitPodCollector    *WaitingOnPodCreateAttemptCollector
+	client                            client.Client
+	scheme                            *runtime.Scheme
+	eventRecorder                     record.EventRecorder
+	overheadCollector                 *OverheadCollector
+	gapAdditionalLabels               bool
+	prGapCollector                    *PipelineRunTaskRunGapCollector
+	trGaps                            *prometheus.HistogramVec
+	pvcNSCache                        map[string]struct{}
+	waitPodNSCache                    map[string]map[string]struct{}
+	waitPRKickoffCache                map[string]map[string]struct{}
+	pvcCollector                      *ThrottledByPVCQuotaCollector
+	waitPodCollector                  *WaitingOnPodCreateAttemptCollector
+	waitPRKickoffCollector            *WaitingOnPipelineRunKickoffCollector
+	podCreateNamespaceFilter          map[string]struct{}
+	pipelineRunKickoffNamespaceFilter map[string]struct{}
 }
 
 func buildReconciler(client client.Client, scheme *runtime.Scheme, eventRecorder record.EventRecorder) *ExporterReconcile {
 	prTrGapCollector := NewPipelineRunTaskRunGapCollector()
 	r := &ExporterReconcile{
-		client:              client,
-		scheme:              scheme,
-		eventRecorder:       eventRecorder,
-		overheadCollector:   NewOverheadCollector(),
-		gapAdditionalLabels: prTrGapCollector.additionalLabels,
-		prGapCollector:      prTrGapCollector,
-		trGaps:              prTrGapCollector.trGaps,
-		pvcNSCache:          map[string]struct{}{},
-		waitPodNSCache:      map[string]struct{}{},
-		pvcCollector:        NewPVCThrottledCollector(),
-		waitPodCollector:    NewWaitingOnPodCreateAttemptCollector(),
+		client:                   client,
+		scheme:                   scheme,
+		eventRecorder:            eventRecorder,
+		overheadCollector:        NewOverheadCollector(),
+		gapAdditionalLabels:      prTrGapCollector.additionalLabels,
+		prGapCollector:           prTrGapCollector,
+		trGaps:                   prTrGapCollector.trGaps,
+		pvcNSCache:               map[string]struct{}{},
+		waitPodNSCache:           map[string]map[string]struct{}{},
+		waitPRKickoffCache:       map[string]map[string]struct{}{},
+		pvcCollector:             NewPVCThrottledCollector(),
+		waitPodCollector:         NewWaitingOnPodCreateAttemptCollector(),
+		waitPRKickoffCollector:   NewWaitingOnPipelineRunKickoffCollector(),
+		podCreateNamespaceFilter: podCreateNameSpaceFilter(),
 	}
 	return r
 }
 
-func innerReset(collector PollCollector, nsCache map[string]struct{}) {
+func innerReset(collector PollCollector, nsCache []string) {
 	// originally considered using pvcThrottle.Reset() but wanted to allow for history based searches from metrics
 	// console, so we are trying keeping track of namespaces; for now, not worried about history across exporter restart
-	for ns := range nsCache {
+	for _, ns := range nsCache {
 		collector.ZeroCollector(ns)
 	}
 
@@ -269,6 +276,7 @@ func (r *ExporterReconcile) Start(ctx context.Context) error {
 		case <-eventTicker.C:
 			r.resetPVCStats(ctx)
 			r.resetPodCreateAttemptedStats(ctx)
+			r.resetPipelineRunKickoffStats(ctx)
 		case <-ctx.Done():
 			controllerLog.Info("ReconcilePVCThrottled Runnable context is marked as done, exiting")
 			eventTicker.Stop()

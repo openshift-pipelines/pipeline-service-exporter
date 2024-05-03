@@ -18,6 +18,7 @@ package collector
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
@@ -105,6 +106,30 @@ func optionalMetricEnabled(envVarName string) bool {
 		return true
 	}
 	return false
+}
+
+const PodCreateFilterEnvName = "POD_CREATE_METRIC_NAMESPACE_FILTER"
+
+func podCreateNameSpaceFilter() map[string]struct{} {
+	namespaceFilter := map[string]struct{}{}
+	env := os.Getenv(PodCreateFilterEnvName)
+	namespaces := strings.Split(env, ",")
+	for _, ns := range namespaces {
+		namespaceFilter[ns] = struct{}{}
+	}
+	return namespaceFilter
+}
+
+const PipelineRunKickoffFilterEnvName = "PIPELINERUN_KICKOFF_METRIC_NAMESPACE_FILTER"
+
+func pipelineRunKickoffNameSpaceFilter() map[string]struct{} {
+	namespaceFilter := map[string]struct{}{}
+	env := os.Getenv(PipelineRunKickoffFilterEnvName)
+	namespaces := strings.Split(env, ",")
+	for _, ns := range namespaces {
+		namespaceFilter[ns] = struct{}{}
+	}
+	return namespaceFilter
 }
 
 func calculateScheduledDuration(created, started time.Time) float64 {
@@ -353,4 +378,88 @@ func filter(numerator, denominator float64) bool {
 	// try to mitigate the tekton controller and user pipelineruns sharing the same
 	// cluster resources
 	return false
+}
+
+func createJSONFormattedString(o any) string {
+	buf, err := json.MarshalIndent(o, "", "    ")
+	dbgStr := ""
+	if err != nil {
+		dbgStr = err.Error()
+	} else {
+		dbgStr = string(buf)
+	}
+	return dbgStr
+}
+
+func buildLastScanCopy(collector PollCollector, m map[string]map[string]struct{}) map[string]map[string]struct{} {
+	keys := []string{}
+	for k := range m {
+		keys = append(keys, k)
+	}
+	innerReset(collector, keys)
+	// create deep copy for comparing from last scan
+	cacheCopy := map[string]map[string]struct{}{}
+	for ns, trMap := range m {
+		newPrMap := map[string]struct{}{}
+		for tr, v := range trMap {
+			newPrMap[tr] = v
+		}
+		cacheCopy[ns] = newPrMap
+	}
+	return cacheCopy
+}
+
+func zeroOutPriorHitNamespacesThatAreNowEmpty(collector PollCollector, lastScan map[string]map[string]struct{}, currentScan map[string]map[string]struct{}) {
+	for ns := range lastScan {
+		_, inMostRecentScan := currentScan[ns]
+		if !inMostRecentScan {
+			collector.ZeroCollector(ns)
+		}
+	}
+}
+
+type DeadlockDetector func() bool
+
+type DeadlockTracker struct {
+	collector         PollCollector
+	deadlocked        DeadlockDetector
+	filter            map[string]struct{}
+	flaggedNamespaces map[string]struct{}
+	lastScan          map[string]map[string]struct{}
+	currentScan       map[string]map[string]struct{}
+}
+
+func (d *DeadlockTracker) PerformDeadlockDetection(name, ns string) {
+	_, filterNS := d.filter[ns]
+	if filterNS {
+		return
+	}
+
+	objMap, alreadyHit := d.currentScan[ns]
+	if !alreadyHit {
+		objMap = map[string]struct{}{}
+		d.currentScan[ns] = objMap
+	}
+
+	cacheCopyObjMap, nsHitLastTime := d.lastScan[ns]
+	if !nsHitLastTime {
+		cacheCopyObjMap = map[string]struct{}{}
+	}
+	_, objHitLastTime := cacheCopyObjMap[name]
+
+	if d.deadlocked() {
+		objMap[name] = struct{}{}
+		// so this particular entity has not passed the test for more than one cycle so
+		// bump the gauge for the namespace; we don't have a name label because of metric cardinality
+		if objHitLastTime {
+			d.collector.IncCollector(ns)
+			d.flaggedNamespaces[ns] = struct{}{}
+		}
+	}
+
+	_, ok := d.flaggedNamespaces[ns]
+	if ok {
+		return
+	}
+	d.collector.ZeroCollector(ns)
 }

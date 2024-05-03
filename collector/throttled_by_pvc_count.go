@@ -29,7 +29,11 @@ func failedBecauseOfPVCQuota(pr *v1.PipelineRun) bool {
 }
 
 func (r *ExporterReconcile) resetPVCStats(ctx context.Context) {
-	innerReset(r.pvcCollector, r.pvcNSCache)
+	keys := []string{}
+	for k := range r.pvcNSCache {
+		keys = append(keys, k)
+	}
+	innerReset(r.pvcCollector, keys)
 	// however, we'll clear out cache to avoid long term accumulation, memory leak, as things like dynamically created test clusters
 	// accumulate; as long as we maintain history for permanent, active tenant namespaces, that is OK
 	r.pvcNSCache = map[string]struct{}{}
