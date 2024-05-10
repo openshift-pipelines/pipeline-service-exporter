@@ -17,6 +17,8 @@ import (
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	"net/http"
+	_ "net/http/pprof"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,7 +38,7 @@ type PollCollector interface {
 	ZeroCollector(ns string)
 }
 
-func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
+func NewManager(cfg *rest.Config, options ctrl.Options, pprofPort string) (ctrl.Manager, error) {
 	// we have seen in testing that this path can get invoked prior to the PipelineRun CRD getting generated,
 	// and controller-runtime does not retry on missing CRDs.
 	// so we are going to wait on the CRDs existing before moving forward.
@@ -102,12 +104,31 @@ func NewManager(cfg *rest.Config, options ctrl.Options) (ctrl.Manager, error) {
 		return nil, err
 	}
 
-	err = SetupController(mgr)
+	err = SetupController(mgr, pprofPort)
 
 	return mgr, nil
 }
 
-func SetupController(mgr ctrl.Manager) error {
+type pprof struct {
+	port string
+}
+
+func (p *pprof) Start(ctx context.Context) error {
+	srv := &http.Server{Addr: ":" + p.port}
+	controllerLog.Info(fmt.Sprintf("starting ppprof on %s", p.port))
+	go func() {
+		err := srv.ListenAndServe()
+		if err != nil {
+			controllerLog.Info(fmt.Sprintf("pprof server err: %s", err.Error()))
+		}
+	}()
+	<-ctx.Done()
+	controllerLog.Info("Shutting down pprof")
+	srv.Shutdown(ctx)
+	return nil
+}
+
+func SetupController(mgr ctrl.Manager, pprofPort string) error {
 	exportFilter := &ExporterFilter{
 		noReconcile:  []predicate.Predicate{},
 		yesReconcile: []predicate.Predicate{},
@@ -140,6 +161,13 @@ func SetupController(mgr ctrl.Manager) error {
 	err = mgr.Add(r)
 	if err != nil {
 		return err
+	}
+	if len(pprofPort) > 0 {
+		pp := &pprof{port: pprofPort}
+		err = mgr.Add(pp)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = ctrl.NewControllerManagedBy(mgr).For(&pipelinev1.TaskRun{}).
