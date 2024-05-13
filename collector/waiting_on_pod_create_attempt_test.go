@@ -5,11 +5,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	"github.com/tektoncd/pipeline/pkg/pod"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
@@ -20,6 +22,8 @@ func TestResetPodCreateAttemptedStats(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = v1.AddToScheme(scheme)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
+
+	os.Setenv(PodCreateFilterEnvName, "test-namespace-2")
 
 	mockTaskRuns := []*v1.TaskRun{
 		{
@@ -90,6 +94,24 @@ func TestResetPodCreateAttemptedStats(t *testing.T) {
 				},
 			},
 		},
+		// should not bump the counter because of the filter
+		{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "test-namespace", Name: "test-7", Annotations: map[string]string{pod.ReleaseAnnotation: "foo"}},
+			Status:     v1.TaskRunStatus{},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "test-namespace-2", Name: "test-3"},
+			Status: v1.TaskRunStatus{
+				Status: duckv1.Status{
+					Conditions: duckv1.Conditions{
+						apis.Condition{
+							Type:   apis.ConditionSucceeded,
+							Status: corev1.ConditionUnknown,
+						},
+					},
+				},
+			},
+		},
 	}
 	ctx := context.TODO()
 	for _, pr := range mockTaskRuns {
@@ -98,10 +120,13 @@ func TestResetPodCreateAttemptedStats(t *testing.T) {
 	}
 
 	reconciler := buildReconciler(c, nil, nil)
+	// initiate first scan
+	reconciler.resetPodCreateAttemptedStats(ctx)
+	// initiate second scan (where repeats mean bump the metric)
 	reconciler.resetPodCreateAttemptedStats(ctx)
 	label := prometheus.Labels{NS_LABEL: "test-namespace"}
 	validateGaugeVec(t, reconciler.waitPodCollector.waitPodCreate, label, float64(2))
-	// second pass should reset and still be two
+	// third pass should reset and still be two
 	reconciler.resetPodCreateAttemptedStats(ctx)
 	validateGaugeVec(t, reconciler.waitPodCollector.waitPodCreate, label, float64(2))
 	// deletion, then another pass, should now be one
@@ -109,5 +134,11 @@ func TestResetPodCreateAttemptedStats(t *testing.T) {
 	assert.NoError(t, err)
 	reconciler.resetPodCreateAttemptedStats(ctx)
 	validateGaugeVec(t, reconciler.waitPodCollector.waitPodCreate, label, float64(1))
+	// change the last remaining one so it passes, should now be zero
+	mockTaskRuns[2].ObjectMeta.Annotations = map[string]string{pod.ReleaseAnnotation: "foo"}
+	err = c.Update(ctx, mockTaskRuns[2])
+	assert.NoError(t, err)
+	reconciler.resetPodCreateAttemptedStats(ctx)
+	validateGaugeVec(t, reconciler.waitPodCollector.waitPodCreate, label, float64(0))
 	unregisterStats(reconciler)
 }
