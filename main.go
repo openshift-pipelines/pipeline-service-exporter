@@ -46,10 +46,12 @@ func main() {
 	var listenAddress string
 	var metricsPath string
 	var probeAddr string
+	var pprofAddr string
 
 	flag.StringVar(&listenAddress, "telemetry.address", ":9117", "Address at which pipeline-service metrics are exported.")
 	flag.StringVar(&metricsPath, "telemetry-path", "/metrics", "Path at which pipeline-service metrics are exported.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.StringVar(&pprofAddr, "pprof-address", "", "The address the pprof endpoint binds to.")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -82,7 +84,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 	}
 
-	mgr, err = collector.NewManager(restConfig, mopts)
+	mgr, err = collector.NewManager(restConfig, mopts, pprofAddr)
 	if err != nil {
 		mainLog.Error(err, "unable to start controller-runtime manager")
 		os.Exit(1)
