@@ -53,7 +53,7 @@ func TestCreateKubeletLatencyFilter_Update(t *testing.T) {
 			t.Errorf(fmt.Sprintf("tc %s expected %v but got %v", tc.name, tc.expectedRC, rc))
 		}
 		if tc.expectedMetric {
-			validateHistogramVec(t, filter.metric, prometheus.Labels{NS_LABEL: tc.newPod.Namespace, TASK_NAME_LABEL: taskRef(tc.newPod.Labels)}, false)
+			validateHistogramVec(t, filter.metric, prometheus.Labels{NS_LABEL: tc.newPod.Namespace}, false)
 		}
 	}
 }

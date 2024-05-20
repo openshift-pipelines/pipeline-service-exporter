@@ -229,7 +229,6 @@ type ExporterReconcile struct {
 	scheme                            *runtime.Scheme
 	eventRecorder                     record.EventRecorder
 	overheadCollector                 *OverheadCollector
-	gapAdditionalLabels               bool
 	prGapCollector                    *PipelineRunTaskRunGapCollector
 	trGaps                            *prometheus.HistogramVec
 	pvcNSCache                        map[string]struct{}
@@ -249,7 +248,6 @@ func buildReconciler(client client.Client, scheme *runtime.Scheme, eventRecorder
 		scheme:                   scheme,
 		eventRecorder:            eventRecorder,
 		overheadCollector:        NewOverheadCollector(),
-		gapAdditionalLabels:      prTrGapCollector.additionalLabels,
 		prGapCollector:           prTrGapCollector,
 		trGaps:                   prTrGapCollector.trGaps,
 		pvcNSCache:               map[string]struct{}{},

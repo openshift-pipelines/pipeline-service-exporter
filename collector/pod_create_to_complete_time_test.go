@@ -253,7 +253,7 @@ func TestPodCreateToCompleteFilter_Update(t *testing.T) {
 		if rc != tc.expectedRC {
 			t.Errorf(fmt.Sprintf("tc %s expected %v but got %v", tc.name, tc.expectedRC, rc))
 		}
-		labels := prometheus.Labels{NS_LABEL: tc.new.Namespace, PIPELINE_NAME_LABEL: pipelineRef(tc.new.Labels), TASK_NAME_LABEL: taskRef(tc.new.Labels)}
+		labels := prometheus.Labels{NS_LABEL: tc.new.Namespace}
 		if tc.expectedNonZeroMetric {
 			validateHistogramVec(t, filter.duration, labels, false)
 		} else {

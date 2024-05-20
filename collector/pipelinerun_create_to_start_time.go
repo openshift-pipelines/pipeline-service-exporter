@@ -14,7 +14,7 @@ type PipelineRunScheduledCollector struct {
 }
 
 func NewPipelineRunScheduledMetric() *prometheus.HistogramVec {
-	labelNames := []string{NS_LABEL, PIPELINE_NAME_LABEL, STATUS_LABEL}
+	labelNames := []string{NS_LABEL, STATUS_LABEL}
 	durationScheduled := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "pipelinerun_duration_scheduled_seconds",
 		Help: "Duration in seconds for a PipelineRun to be 'scheduled', meaning it has been received by the Tekton controller.  This is an indication of how quickly create events from the API server are arriving to the Tekton controller.",
@@ -34,7 +34,7 @@ func bumpPipelineRunScheduledDuration(scheduleDuration float64, pr *v1.PipelineR
 	if succeededCondition.IsFalse() {
 		status = FAILED
 	}
-	labels := map[string]string{NS_LABEL: pr.Namespace, PIPELINE_NAME_LABEL: pipelineRunPipelineRef(pr), STATUS_LABEL: status}
+	labels := map[string]string{NS_LABEL: pr.Namespace, STATUS_LABEL: status}
 	metric.With(labels).Observe(scheduleDuration)
 }
 

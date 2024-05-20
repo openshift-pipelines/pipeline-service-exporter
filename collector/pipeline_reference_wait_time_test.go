@@ -135,7 +135,7 @@ func TestPipelineRefWaitTimeFilter_Update(t *testing.T) {
 		if rc != tc.expectedRC {
 			t.Errorf(fmt.Sprintf("tc %s expected %v but got %v", tc.name, tc.expectedRC, rc))
 		}
-		labels := prometheus.Labels{NS_LABEL: tc.newPR.Namespace, PIPELINE_NAME_LABEL: pipelineRef(tc.newPR.Labels)}
+		labels := prometheus.Labels{NS_LABEL: tc.newPR.Namespace}
 		if tc.expectedNonZeroMetric {
 			validateHistogramVec(t, filter.waitDuration, labels, false)
 		} else {

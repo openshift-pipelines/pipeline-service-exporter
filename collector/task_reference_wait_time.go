@@ -12,7 +12,7 @@ import (
 )
 
 func NewTaskReferenceWaitTimeMetric() *prometheus.HistogramVec {
-	labelNames := []string{NS_LABEL, TASK_NAME_LABEL}
+	labelNames := []string{NS_LABEL}
 	waitMetric := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "taskrun_task_resolution_wait_milliseconds",
 		Help:    "Duration in milliseconds for a resolution request for a task reference needed by a taskrun to be recognized as complete by the taskrun reconciler in the tekton controller. ",
@@ -55,7 +55,7 @@ func (f *taskRefWaitTimeFilter) Update(e event.UpdateEvent) bool {
 		if !oldTR.IsDone() && newTR.IsDone() {
 			// if we did not use some sort of resolve, set metric to 0
 			if newTR.Spec.TaskRef == nil {
-				labels := map[string]string{NS_LABEL: newTR.Namespace, TASK_NAME_LABEL: taskRef(newTR.Labels)}
+				labels := map[string]string{NS_LABEL: newTR.Namespace}
 				f.waitDuration.With(labels).Observe(float64(0))
 			}
 			return false
@@ -70,7 +70,7 @@ func (f *taskRefWaitTimeFilter) Update(e event.UpdateEvent) bool {
 		oldReason := oldSucceedCondtition.Reason
 		newReason := newSucceedCondition.Reason
 		if oldReason == v1.TaskRunReasonResolvingTaskRef && newReason != v1.TaskRunReasonResolvingTaskRef {
-			labels := map[string]string{NS_LABEL: newTR.Namespace, TASK_NAME_LABEL: taskRef(newTR.Labels)}
+			labels := map[string]string{NS_LABEL: newTR.Namespace}
 			originalTime := oldSucceedCondtition.LastTransitionTime.Inner
 			f.waitDuration.With(labels).Observe(float64(newSucceedCondition.LastTransitionTime.Inner.Sub(originalTime.Time).Milliseconds()))
 			return false
