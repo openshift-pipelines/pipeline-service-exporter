@@ -37,19 +37,15 @@ import (
 )
 
 const (
-	FILTER_THRESHOLD                    = "FILTER_THRESHOLD"
-	DEFAULT_THRESHOLD                   = float64(300000) // 5 minutes in milliseconds
-	ALERT_RATIO                         = float64(0.05)
-	ENABLE_GAP_METRIC_ADDITIONAL_LABELS = "ENABLE_GAP_METRIC_ADDITIONAL_LABELS"
-	NS_LABEL                            = "namespace"
-	PIPELINE_NAME_LABEL                 = "pipelinename"
-	TASK_NAME_LABEL                     = "taskname"
-	COMPLETED_LABEL                     = "completed"
-	UPCOMING_LABEL                      = "upcoming"
-	STATUS_LABEL                        = "status"
-	SUCCEEDED                           = "succeded"
-	FAILED                              = "failed"
-	THROTTLED_LABEL                     = "pipelineservice.appstudio.io/throttled"
+	FILTER_THRESHOLD  = "FILTER_THRESHOLD"
+	DEFAULT_THRESHOLD = float64(300000) // 5 minutes in milliseconds
+	ALERT_RATIO       = float64(0.05)
+	NS_LABEL          = "namespace"
+	TASK_NAME_LABEL   = "taskname"
+	STATUS_LABEL      = "status"
+	SUCCEEDED         = "succeded"
+	FAILED            = "failed"
+	THROTTLED_LABEL   = "pipelineservice.appstudio.io/throttled"
 )
 
 func pipelineRunPipelineRef(pr *v1.PipelineRun) string {

@@ -34,7 +34,7 @@ is "perhaps" the sum of those two
 */
 
 func NewTaskRunScheduledMetric() *prometheus.HistogramVec {
-	labelNames := []string{NS_LABEL, TASK_NAME_LABEL, STATUS_LABEL}
+	labelNames := []string{NS_LABEL, STATUS_LABEL}
 	durationScheduled := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "taskrun_duration_scheduled_seconds",
 		Help: "Duration in seconds for a TaskRun to be 'scheduled', meaning it has been received by the Tekton controller.  This is an indication of how quickly create events from the API server are arriving to the Tekton controller.",
@@ -84,7 +84,7 @@ func bumpTaskRunScheduledDuration(scheduleDuration float64, tr *v1.TaskRun, metr
 	if succeedCondition.IsFalse() {
 		status = FAILED
 	}
-	labels := map[string]string{NS_LABEL: tr.Namespace, TASK_NAME_LABEL: taskRef(tr.Labels), STATUS_LABEL: status}
+	labels := map[string]string{NS_LABEL: tr.Namespace, STATUS_LABEL: status}
 	metric.With(labels).Observe(scheduleDuration)
 }
 

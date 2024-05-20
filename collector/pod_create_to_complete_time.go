@@ -8,7 +8,7 @@ import (
 )
 
 func NewPodCreateToCompleteMetric() *prometheus.HistogramVec {
-	labelNames := []string{NS_LABEL, PIPELINE_NAME_LABEL, TASK_NAME_LABEL}
+	labelNames := []string{NS_LABEL}
 	c2cMetric := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "tekton_pods_create_to_complete_seconds",
 		Help: "Since tekton's duration are only from start time to completion, we provide a create time to completion for comparisons and potential alerting",
@@ -66,7 +66,7 @@ func (f *podCreateToCompleteFilter) Update(e event.UpdateEvent) bool {
 
 		// if first transition when old pod still had non-terminated containers, but the new pod does not, process
 		if oldTerminatedState == nil && newTerminatedState != nil {
-			labels := map[string]string{NS_LABEL: newpod.Namespace, PIPELINE_NAME_LABEL: pipelineRef(newpod.Labels), TASK_NAME_LABEL: taskRef(newpod.Labels)}
+			labels := map[string]string{NS_LABEL: newpod.Namespace}
 			// we've seen in staging, especially with errors and short durations, and corroborated by comments I see in tekton,
 			// where it is conceivable node times are not synchronized, when controller has been scheduled to other nodes than the pods, weird timestamps, etc.
 			// so we check

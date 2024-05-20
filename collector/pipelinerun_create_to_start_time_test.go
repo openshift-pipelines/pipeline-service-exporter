@@ -171,7 +171,7 @@ func TestPipelineRunScheduleCollection(t *testing.T) {
 	}
 	for _, pr := range mockPipelineRuns {
 		metric := NewPipelineRunScheduledMetric()
-		label := prometheus.Labels{NS_LABEL: "test-namespace", PIPELINE_NAME_LABEL: pipelineRunPipelineRef(pr), STATUS_LABEL: SUCCEEDED}
+		label := prometheus.Labels{NS_LABEL: "test-namespace", STATUS_LABEL: SUCCEEDED}
 		bumpPipelineRunScheduledDuration(calculateScheduledDurationPipelineRun(pr), pr, metric)
 		validateHistogramVec(t, metric, label, false)
 		metrics.Registry.Unregister(metric)

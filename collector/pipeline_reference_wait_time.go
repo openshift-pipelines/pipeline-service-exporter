@@ -12,7 +12,7 @@ import (
 )
 
 func NewPipelineReferenceWaitTimeMetric() *prometheus.HistogramVec {
-	labelNames := []string{NS_LABEL, PIPELINE_NAME_LABEL}
+	labelNames := []string{NS_LABEL}
 	waitMetric := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "pipelinerun_pipeline_resolution_wait_milliseconds",
 		Help:    "Duration in milliseconds for a resolution request for a pipeline reference needed by a pipelinerun to be recognized as complete by the pipelinerun reconciler in the tekton controller. ",
@@ -54,7 +54,7 @@ func (f *pipelineRefWaitTimeFilter) Update(e event.UpdateEvent) bool {
 		if !oldPR.IsDone() && newPR.IsDone() {
 			// if we did not use some sort of resolve, set metric to 0
 			if newPR.Spec.PipelineRef == nil {
-				labels := map[string]string{NS_LABEL: newPR.Namespace, PIPELINE_NAME_LABEL: pipelineRef(newPR.Labels)}
+				labels := map[string]string{NS_LABEL: newPR.Namespace}
 				f.waitDuration.With(labels).Observe(float64(0))
 			}
 		}
@@ -69,7 +69,7 @@ func (f *pipelineRefWaitTimeFilter) Update(e event.UpdateEvent) bool {
 		newReason := newSucceedCondition.Reason
 		// wrt direct string reference, waiting for tag/release with constant moved to the api package
 		if oldReason == "ResolvingPipelineRef" && newReason != "ResolvingPipelineRef" {
-			labels := map[string]string{NS_LABEL: newPR.Namespace, PIPELINE_NAME_LABEL: pipelineRef(newPR.Labels)}
+			labels := map[string]string{NS_LABEL: newPR.Namespace}
 			originalTime := oldSucceedCondtition.LastTransitionTime.Inner
 			f.waitDuration.With(labels).Observe(float64(newSucceedCondition.LastTransitionTime.Inner.Sub(originalTime.Time).Milliseconds()))
 			return false

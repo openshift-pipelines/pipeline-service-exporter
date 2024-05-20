@@ -17,16 +17,11 @@ import (
 )
 
 type PipelineRunTaskRunGapCollector struct {
-	trGaps           *prometheus.HistogramVec
-	additionalLabels bool
+	trGaps *prometheus.HistogramVec
 }
 
 func NewPipelineRunTaskRunGapCollector() *PipelineRunTaskRunGapCollector {
 	labelNames := []string{NS_LABEL, STATUS_LABEL}
-	additionalLabels := optionalMetricEnabled(ENABLE_GAP_METRIC_ADDITIONAL_LABELS)
-	if additionalLabels {
-		labelNames = append(labelNames, PIPELINE_NAME_LABEL, COMPLETED_LABEL, UPCOMING_LABEL)
-	}
 	trGaps := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "pipelinerun_gap_between_taskruns_milliseconds",
 		Help: "Duration in milliseconds between a taskrun completing and the next taskrun being created within a pipelinerun.  For a pipelinerun's first taskrun, the duration is the time between that taskrun's creation and the pipelinerun's creation.",
@@ -36,8 +31,7 @@ func NewPipelineRunTaskRunGapCollector() *PipelineRunTaskRunGapCollector {
 	}, labelNames)
 
 	pipelineRunTaskRunGapCollector := &PipelineRunTaskRunGapCollector{
-		trGaps:           trGaps,
-		additionalLabels: additionalLabels,
+		trGaps: trGaps,
 	}
 	metrics.Registry.MustRegister(trGaps)
 
@@ -115,17 +109,11 @@ func (c *PipelineRunTaskRunGapCollector) bumpGapDuration(pr *v1.PipelineRun, oc 
 		return
 	}
 
-	prRef := pipelineRunPipelineRef(pr)
 	gapEntries := calculateGaps(ctx, pr, oc, sortedTaskRunsByCreateTimes, reverseOrderSortedTaskRunsByCompletionTimes)
 	for _, gapEntry := range gapEntries {
 		labels := map[string]string{
 			NS_LABEL:     pr.Namespace,
 			STATUS_LABEL: gapEntry.status,
-		}
-		if c.additionalLabels {
-			labels[PIPELINE_NAME_LABEL] = prRef
-			labels[COMPLETED_LABEL] = gapEntry.completed
-			labels[UPCOMING_LABEL] = gapEntry.upcoming
 		}
 		c.trGaps.With(labels).Observe(gapEntry.gap)
 	}

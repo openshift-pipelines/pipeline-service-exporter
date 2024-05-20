@@ -135,7 +135,7 @@ func TestTaskRunScheduledCollection(t *testing.T) {
 
 	for _, tr := range mockTaskRuns {
 		metric := NewTaskRunScheduledMetric()
-		label := prometheus.Labels{NS_LABEL: "test-namespace", TASK_NAME_LABEL: taskRef(tr.Labels), STATUS_LABEL: SUCCEEDED}
+		label := prometheus.Labels{NS_LABEL: "test-namespace", STATUS_LABEL: SUCCEEDED}
 		bumpTaskRunScheduledDuration(calculateScheduledDurationTaskRun(tr), tr, metric)
 		validateHistogramVec(t, metric, label, false)
 		metrics.Registry.Unregister(metric)

@@ -25,7 +25,7 @@ _**Pipeline Bundle Resolution Wait Time:**_
 Duration in milliseconds for a resolution request for a pipeline reference needed by a pipelinerun to be recognized as complete by the pipelinerun reconciler in the tekton controller.
 
 _Metric Name:_ `pipelinerun_pipeline_resolution_wait_milliseconds`
-_Labels:_ `namespace`, `pipelinename` labels.
+_Labels:_ `namespace`  label.
 _Data Type:_ Histogram
 _Description:_ Gives an indication on how long the pulling of the Konflux Pipeline Bundles form quay.io are taking,
 before the cache is established, when creating PipelineRuns.
@@ -34,7 +34,7 @@ _**Task Bundle Resolution Wait Time:**_
 Duration in milliseconds for a resolution request for a pipeline reference needed by a taskrun to be recognized as complete by the taskrun reconciler in the tekton controller.
 
 _Metric Name:_ `taskrun_task_resolution_wait_milliseconds`
-_Labels:_ `namespace`, `taskname` labels.
+_Labels:_ `namespace` label.
 _Data Type:_ Histogram
 _Description:_ Gives an indication on how long the pulling of the Konflux Task and Pipeline Bundles form quay.io are taking,
 before the cache is established, when creating TaskRuns.
@@ -43,7 +43,7 @@ _**Underlying Pod Creation To Complete Times:**_
 Since tekton's analogous duration metrics are only from start time to completion, we provide a create time to completion for comparisons and potential alerting.
 
 _Metric Name:_ `tekton_pods_create_to_complete_seconds`
-_Labels:_ `namespace`, `pipelinename`, `taskname` labels.
+_Labels:_ `namespace` label.
 _Data Type:_ Histogram
 _Description:_ A better alternative in our opinion to the upstream metric `tekton_pipelines_controller_pipelinerun_duration_seconds_[bucket, sum, count]`
 
@@ -78,7 +78,7 @@ _**PipelineRun Scheduling Duration:**_
 The duration of time in seconds taken for a PipelineRun to be "scheduled", meaning it has been received by the Tekton controller.  It is calculated as the difference between the creation timestamp and the start time of the PipelineRun, where the start time is set by the Tekton controller on the initial event received for the creation of the PipelineRun.  It is a good indication of how quickly the API server sends create events to the Tekton controller.
 
 _Metric Name:_ `pipelinerun_duration_scheduled_seconds`
-_Labels:_ a `namespace` label and the `pipelinename` label is set to the name of the Pipeline if its reference is set, otherwise the name of the PipelineRun.
+_Labels:_ a `namespace` label.
 _Data Type:_ Histogram
 _Description:_ The time taken in seconds for a PipelineRun to be "scheduled", meaning it has been received by the Tekton controller.
 
@@ -86,7 +86,7 @@ _**TaskRun Scheduling Duration:**_
 The duration of time in seconds taken for a TaskRun to be "scheduled", meaning it has been received by the Tekton controller.  It is calculated as the difference between the creation timestamp and the start time of the TaskRun, where the start time is set by the Tekton controller on the initial event received for the creation of the TaskRun.  It is a good indication of how quickly the API server sends create events to the Tekton controller.
 
 _Metric Name:_ `taskrun_duration_scheduled_seconds`
-_Labels:_ a `namespace` label and the `taskname` label is set to the name of the Task if its reference is set, otherwise the name of the TaskRun.
+_Labels:_ a `namespace` label.
 _Data Type:_ Histogram
 _Description:_ The time taken in seconds for a TaskRun to be "scheduled", meaning it has been received by the Tekton controller.
 
@@ -95,7 +95,7 @@ _**Scheduling Duration of different TaskRuns with a PipelineRun:**_
 The time taken in milliseconds between the creation of the first TaskRun(s) and the creation of its PipelineRun, followed by the duration in milliseconds between the completion of a preceding TaskRun and the creation of the following TaskRun.  This metrics accounts for both sequential TaskRuns, parallel TaskRuns that start off a PipelineRun, and ending TaskRuns that depend on multiple TaskRun chains that run in parallel.
 
 _Metric Name:_ `pipelinerun_gap_between_taskruns_milliseconds`
-_Labels:_ Minimally a `namespace` label.  If the `ENABLE_GAP_METRIC_ADDITIONAL_LABELS` environment variable is set to `true` on the exporter deployment, the `pipelinename`, `completed`, and `upcoming` labels are set.  The `pipelinename` label is set to the name of the Pipeline if its reference is set, otherwise the name of the PipelineRun.  The `completed` label is set either the Pipeline name if we are dealing with the first TaskRun, or the name of the latest Task for the TaskRun to be completed.  The `upcoming` label is set to the name of the Task of the TaskRun that is created but not yet complete.
+_Labels:_ Minimally a `namespace` label.  
 _Data Type_: Histogram
 _Description_: The taken between TaskRuns within a PipelineRun
 
@@ -103,7 +103,7 @@ _**Scheduling Duration that a TaskRun Pod is recognized by the Kubelet:**_
 The time taken in milliseconds between the creation of a Pod, where the Pod start time is set once the kubelet has acknowledged the pod, but has not yet pulled its images.
 
 _Metric Name:_ `taskrun_pod_duration_kubelet_acknowledged_milliseconds`
-_Labels:_ a `namespace` label and the `taskname` label is set to the name of the Task if its reference is set, otherwise the name of the TaskRun.
+_Labels:_ a `namespace` label.
 _Data Type_: Histogram
 _Description_: Duration in milliseconds between the pod creation time and pod start time
 
@@ -111,7 +111,7 @@ _**Scheduling Duration that a TaskRun Pod's images are pulled by the Kubelet and
 The time taken in milliseconds between the pod start time and the first container to start. This should include any overhead to pull container images, plus any kubelet to linux scheduling overhead.
 
 _Metric Name:_ `taskrun_pod_duration_kubelet_to_container_start_milliseconds`
-_Labels:_ a `namespace` label and the `taskname` label is set to the name of the Task if its reference is set, otherwise the name of the TaskRun.
+_Labels:_ a `namespace` label.
 _Data Type_: Histogram
 _Description_: Duration in milliseconds between the pod start time and the first container to start.
 

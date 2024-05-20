@@ -33,7 +33,7 @@ is "perhaps" the sum of those two
 */
 
 func NewPodCreateToKubeletDurationMetric() *prometheus.HistogramVec {
-	labelNames := []string{NS_LABEL, TASK_NAME_LABEL}
+	labelNames := []string{NS_LABEL}
 	metric := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "taskrun_pod_duration_kubelet_acknowledged_milliseconds",
 		Help:    "Duration in milliseconds between the pod creation time and pod start time, where the pod start time is set once the kubelet has acknowledged the pod, but has not yet pulled its images.",
@@ -65,7 +65,7 @@ func (f *createKubeletLatencyFilter) Update(e event.UpdateEvent) bool {
 	newpod, oknew := e.ObjectNew.(*corev1.Pod)
 	if okold && oknew {
 		if oldpod.Status.StartTime == nil && newpod.Status.StartTime != nil {
-			labels := map[string]string{NS_LABEL: newpod.Namespace, TASK_NAME_LABEL: taskRef(newpod.Labels)}
+			labels := map[string]string{NS_LABEL: newpod.Namespace}
 			f.metric.With(labels).Observe(calculateTaskRunPodCreatedToKubeletAcceptsAndStartTimeSetDuration(newpod))
 			return false
 		}
