@@ -206,21 +206,26 @@ func isPipelineRunThrottled(pr *v1.PipelineRun, oc client.Client, ctx context.Co
 			ctrl.Log.Info(fmt.Sprintf("could not get taskrun %s:%s: %s", pr.Namespace, kidRef.Name, err.Error()))
 			return false, "", err
 		}
-		succeedCondition := kid.Status.GetCondition(apis.ConditionSucceeded)
-		if succeedCondition != nil && succeedCondition.Status == corev1.ConditionUnknown {
-			switch succeedCondition.Reason {
-			case pod.ReasonExceededResourceQuota:
-				throttled = true
-				throttledTaskRun = kid.Name
-				break
-			case pod.ReasonExceededNodeResources:
-				throttled = true
-				throttledTaskRun = kid.Name
-				break
-			}
+		if isTaskRunThrottled(kid) {
+			throttled = true
+			throttledTaskRun = kid.Name
+			break
 		}
 	}
 	return throttled, throttledTaskRun, nil
+}
+
+func isTaskRunThrottled(tr *v1.TaskRun) bool {
+	succeedCondition := tr.Status.GetCondition(apis.ConditionSucceeded)
+	if succeedCondition != nil && succeedCondition.Status == corev1.ConditionUnknown {
+		switch succeedCondition.Reason {
+		case pod.ReasonExceededResourceQuota:
+			return true
+		case pod.ReasonExceededNodeResources:
+			return true
+		}
+	}
+	return false
 }
 
 func isPipelineRunGoing(pr *v1.PipelineRun, oc client.Client, ctx context.Context) bool {

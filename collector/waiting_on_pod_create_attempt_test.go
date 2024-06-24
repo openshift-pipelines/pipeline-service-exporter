@@ -125,15 +125,15 @@ func TestResetPodCreateAttemptedStats(t *testing.T) {
 	// initiate second scan (where repeats mean bump the metric)
 	reconciler.resetPodCreateAttemptedStats(ctx)
 	label := prometheus.Labels{NS_LABEL: "test-namespace"}
-	validateGaugeVec(t, reconciler.waitPodCollector.waitPodCreate, label, float64(2))
-	// third pass should reset and still be two
+	validateGaugeVec(t, reconciler.waitPodCollector.waitPodCreate, label, float64(1))
+	// third pass should reset and still be one
 	reconciler.resetPodCreateAttemptedStats(ctx)
-	validateGaugeVec(t, reconciler.waitPodCollector.waitPodCreate, label, float64(2))
-	// deletion, then another pass, should now be one
+	validateGaugeVec(t, reconciler.waitPodCollector.waitPodCreate, label, float64(1))
+	// deletion, then another pass, should still be zero
 	err := c.Delete(ctx, mockTaskRuns[1])
 	assert.NoError(t, err)
 	reconciler.resetPodCreateAttemptedStats(ctx)
-	validateGaugeVec(t, reconciler.waitPodCollector.waitPodCreate, label, float64(1))
+	validateGaugeVec(t, reconciler.waitPodCollector.waitPodCreate, label, float64(0))
 	// change the last remaining one so it passes, should now be zero
 	mockTaskRuns[2].ObjectMeta.Annotations = map[string]string{pod.ReleaseAnnotation: "foo"}
 	err = c.Update(ctx, mockTaskRuns[2])

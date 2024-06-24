@@ -68,6 +68,10 @@ func (r *ExporterReconcile) resetPodCreateAttemptedStats(ctx context.Context) {
 					return false
 				}
 
+				if isTaskRunThrottled(&tr) {
+					return false
+				}
+
 				// reason and message will be set when MarkReasonOngoing called, which should occur on a create pod error;
 				// also see updateIncompleteTaskRunStatus for how Pod conditions are handled while in progress
 				con := tr.Status.GetCondition(apis.ConditionSucceeded)
@@ -82,6 +86,12 @@ func (r *ExporterReconcile) resetPodCreateAttemptedStats(ctx context.Context) {
 				// attempt to set the "pipeline.tekton.dev/release" annotation; I see that in my samples from konflux prod
 				_, ok := tr.Annotations[pod.ReleaseAnnotation]
 				if ok {
+					return false
+				}
+
+				// any namespace throttling could defer pod creation; we wait until all throttled items have been processed
+				_, nsThrotled := deadlockTracker.flaggedNamespaces[tr.Namespace]
+				if nsThrotled {
 					return false
 				}
 

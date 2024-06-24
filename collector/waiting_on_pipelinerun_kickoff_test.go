@@ -202,16 +202,16 @@ func TestPipelineRunKickoffStats(t *testing.T) {
 	// initiate second scan (where repeats mean bump the metric)
 	reconciler.resetPipelineRunKickoffStats(ctx)
 	label := prometheus.Labels{NS_LABEL: "test-namespace"}
-	validateGaugeVec(t, reconciler.waitPRKickoffCollector.waitPipelineRunKickoff, label, float64(2))
-	// third pass should reset and still be two
+	validateGaugeVec(t, reconciler.waitPRKickoffCollector.waitPipelineRunKickoff, label, float64(1))
+	// third pass should reset and still be one
 	reconciler.resetPipelineRunKickoffStats(ctx)
-	validateGaugeVec(t, reconciler.waitPRKickoffCollector.waitPipelineRunKickoff, label, float64(2))
-	// deletion, then another pass, should now be one
+	validateGaugeVec(t, reconciler.waitPRKickoffCollector.waitPipelineRunKickoff, label, float64(1))
+	// deletion, then another pass, should now be zero
 	err := c.Delete(ctx, mockPipelineRuns[1])
 	assert.NoError(t, err)
 	reconciler.resetPipelineRunKickoffStats(ctx)
-	validateGaugeVec(t, reconciler.waitPRKickoffCollector.waitPipelineRunKickoff, label, float64(1))
-	// change the last remaining one so it passes, should now be zero
+	validateGaugeVec(t, reconciler.waitPRKickoffCollector.waitPipelineRunKickoff, label, float64(0))
+	// change the last remaining one so it passes, should still be zero
 	mockPipelineRuns[2].Status.StartTime = &metav1.Time{time.Now()}
 	err = c.Update(ctx, mockPipelineRuns[2])
 	assert.NoError(t, err)
