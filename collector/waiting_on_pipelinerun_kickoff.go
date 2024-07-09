@@ -59,6 +59,11 @@ func (r *ExporterReconcile) resetPipelineRunKickoffStats(ctx context.Context) {
 					return false
 				}
 
+				throttled, _, _ := isPipelineRunThrottled(&pr, r.client, context.Background())
+				if throttled {
+					return false
+				}
+
 				if len(pr.Status.ChildReferences) > 0 || len(pr.Status.SkippedTasks) > 0 {
 					return false
 				}
@@ -70,6 +75,12 @@ func (r *ExporterReconcile) resetPipelineRunKickoffStats(ctx context.Context) {
 
 				// FYI this is set before the Task DAG is built
 				if pr.HasStarted() {
+					return false
+				}
+
+				// any namespace throttling could defer taskrun/pod creation; we wait until all throttled items have been processed
+				_, nsThrotled := deadlockTracker.flaggedNamespaces[pr.Namespace]
+				if nsThrotled {
 					return false
 				}
 
