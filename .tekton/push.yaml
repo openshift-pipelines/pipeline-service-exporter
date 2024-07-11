@@ -14,7 +14,7 @@ spec:
     - name: revision
       value: "{{revision}}"
     - name: output-image
-      value: "quay.io/redhat-appstudio/pipeline-service-exporter:{{revision}}"
+      value: "quay.io/konflux-ci/pipeline-service-exporter:{{revision}}"
   pipelineRef:
     params:
       - name: bundle
