@@ -66,6 +66,14 @@ _Labels:_ `namespace` label.
 _Data Type:_ Gauge
 _Description:_ Number of TaskRuns where the Tekton Controller has yet to attempt to create its underlying Pod, or the TaskRun is still in Pending state, for multiple scan iterations.
 
+_**Pending ResolutionRequests Yet To Be Attempted**_  
+The number of ResolutionRequests where the Resolver Controller has yet to attempt to initiate retrieval for multiple scan iterations.
+
+_Metric Name:_ `pending_resolutionrequest_count`
+_Labels:_ `namespace` label.  
+_Data Type:_ Gauge
+_Description:_ Number of ResolutionRequests where the Resolver Controller has yet to initiate retrieval for multiple scan iterations.
+
 _**PipelineRun Yet To Kick Off:**_  
 The number of PipelineRuns where the Tekton Controller has yet to attempt to process its correctly defined Task specifications for multiple scan iterations.
 
