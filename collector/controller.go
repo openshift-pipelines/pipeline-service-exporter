@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	pipelinev1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1"
+	"github.com/tektoncd/pipeline/pkg/apis/resolution/v1beta1"
 	pipelinev1client "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/typed/pipeline/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -79,6 +80,9 @@ func NewManager(cfg *rest.Config, options ctrl.Options, pprofPort string) (ctrl.
 	if err := pipelinev1.AddToScheme(options.Scheme); err != nil {
 		return nil, err
 	}
+	if err := v1beta1.AddToScheme(options.Scheme); err != nil {
+		return nil, err
+	}
 
 	var mgr ctrl.Manager
 	var err error
@@ -95,6 +99,7 @@ func NewManager(cfg *rest.Config, options ctrl.Options, pprofPort string) (ctrl.
 		&corev1.Pod{}: cache.ObjectSelector{
 			Label: podSelector,
 		},
+		&v1beta1.ResolutionRequest{}: {},
 	}
 	cacheOptions := cache.Options{SelectorsByObject: selectors}
 	options.NewCache = cache.BuilderWithOptions(cacheOptions)
@@ -187,6 +192,14 @@ func SetupController(mgr ctrl.Manager, pprofPort string) error {
 	if err != nil {
 		return err
 	}
+
+	err = ctrl.NewControllerManagedBy(mgr).For(&v1beta1.ResolutionRequest{}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 32}).
+		Complete(r)
+
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -234,9 +247,11 @@ type ExporterReconcile struct {
 	pvcNSCache                        map[string]struct{}
 	waitPodNSCache                    map[string]map[string]struct{}
 	waitPRKickoffCache                map[string]map[string]struct{}
+	waitRRCache                       map[string]map[string]struct{}
 	pvcCollector                      *ThrottledByPVCQuotaCollector
 	waitPodCollector                  *WaitingOnPodCreateAttemptCollector
 	waitPRKickoffCollector            *WaitingOnPipelineRunKickoffCollector
+	waitRRCollector                   *WaitingOnResolutionRequestCollector
 	podCreateNamespaceFilter          map[string]struct{}
 	pipelineRunKickoffNamespaceFilter map[string]struct{}
 }
@@ -253,9 +268,11 @@ func buildReconciler(client client.Client, scheme *runtime.Scheme, eventRecorder
 		pvcNSCache:               map[string]struct{}{},
 		waitPodNSCache:           map[string]map[string]struct{}{},
 		waitPRKickoffCache:       map[string]map[string]struct{}{},
+		waitRRCache:              map[string]map[string]struct{}{},
 		pvcCollector:             NewPVCThrottledCollector(),
 		waitPodCollector:         NewWaitingOnPodCreateAttemptCollector(),
 		waitPRKickoffCollector:   NewWaitingOnPipelineRunKickoffCollector(),
+		waitRRCollector:          NewWaitingOnResolutionRequestCollector(),
 		podCreateNamespaceFilter: podCreateNameSpaceFilter(),
 	}
 	return r
@@ -303,6 +320,7 @@ func (r *ExporterReconcile) Start(ctx context.Context) error {
 			r.resetPVCStats(ctx)
 			r.resetPodCreateAttemptedStats(ctx)
 			r.resetPipelineRunKickoffStats(ctx)
+			r.resetResoultionRequestsStats(ctx)
 		case <-ctx.Done():
 			controllerLog.Info("ReconcilePVCThrottled Runnable context is marked as done, exiting")
 			eventTicker.Stop()
