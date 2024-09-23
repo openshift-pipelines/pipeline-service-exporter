@@ -41,5 +41,5 @@ spec:
           - name: GITHUB_APP_INSTALLATION_ID
             value: "35628851"
         taskRef:
-          bundle: quay.io/redhat-appstudio-tekton-catalog/task-update-infra-deployments:0.1
+          bundle: quay.io/konflux-ci/tekton-catalog/task-update-infra-deployments:0.1
           name: update-infra-deployments
